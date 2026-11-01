@@ -3,14 +3,6 @@
 iPad(第10世代 / A14)向け・シャッター音ゼロの高画質カメラPWA。図書館などでの資料撮影用です。
 Material 3 スタイル + Material Symbols アイコン / iPadのカメラに近い配置 / ビルド不要の静的ファイルのみ。
 
-## GitHub Pages へのデプロイ
-
-1. GitHubで新規リポジトリを作成し、このフォルダの中身をそのまま `main` ブランチにpush(`.github` と `.nojekyll` も含める)
-2. リポジトリの **Settings → Pages → Build and deployment → Source** を **GitHub Actions** にする
-3. push すると自動デプロイ → `https://<ユーザー名>.github.io/<リポジトリ名>/` で公開
-   (ワークフローを使わない場合は Source を「Deploy from a branch → main / (root)」でも可)
-
-すべて相対パスなので、サブパス(`/<リポジトリ名>/`)でもそのまま動きます。カメラはHTTPS必須ですが、GitHub PagesはHTTPSなので問題ありません。
 
 ## iPadへのインストール
 
