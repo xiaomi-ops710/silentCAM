@@ -881,3 +881,21 @@ html.ios .tb[data-k=ev] .evv{transition:opacity .2s}
 #ipicker button.sel{color:#FFD60A}
 html.ipad #ipicker{top:0}
 html.ios.ipad #ib-aspect{top:calc(22% - 28px)}
+
+/* =====================================================================
+   v21: Liquid Glass 質感(Chromium は屈折、Safari / Firefox は磨りガラス＋縁の光)
+   ・屈折: backdrop-filter: url(#lg-refract) — Chromium 系(Chrome / Edge / Android Chrome)のみ
+   ・それ以外: 磨りガラス(blur + saturate)＋内側の縁の光＋斜めの反射
+   ===================================================================== */
+.lgg{background:linear-gradient(180deg,rgba(255,255,255,.17),rgba(255,255,255,.07));-webkit-backdrop-filter:blur(22px) saturate(185%) brightness(1.06);backdrop-filter:blur(22px) saturate(185%) brightness(1.06);box-shadow:inset 0 0 0 .6px rgba(255,255,255,.34),inset 0 1.6px 1.2px rgba(255,255,255,.42),inset 0 -1.2px 1px rgba(255,255,255,.14),0 10px 28px rgba(0,0,0,.24);isolation:isolate}
+.lgg::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:-1;background:linear-gradient(158deg,rgba(255,255,255,.36) 0%,rgba(255,255,255,0) 34%,rgba(255,255,255,0) 70%,rgba(255,255,255,.16) 100%)}
+.tile .tc,.lg,.ios-sheet,#ipicker{position:relative}
+html.lg-refract .lgg{-webkit-backdrop-filter:url(#lg-refract) blur(4px) saturate(190%) brightness(1.06);backdrop-filter:url(#lg-refract) blur(4px) saturate(190%) brightness(1.06)}
+.lgg-sheet{background:linear-gradient(180deg,rgba(40,40,44,.62),rgba(30,30,34,.7));-webkit-backdrop-filter:blur(40px) saturate(180%);backdrop-filter:blur(40px) saturate(180%)}
+/* 押したときの「ぷにっ」と戻る動き */
+html.ios .lgg{transition:transform .32s cubic-bezier(.34,1.56,.64,1),background .3s,box-shadow .3s}
+html.ios .lgg:active{transform:scale(.9)}
+html.ios .ib.lgg:active,html.ios .ipad-top.lgg:active{transform:scale(.9)}
+.ico-lg{position:relative;z-index:1}
+.ms[data-sf]::before{content:none!important}
+.lg .ms[data-sf]{display:grid;place-items:center}

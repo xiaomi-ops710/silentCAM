@@ -107,7 +107,7 @@ const MAIN_TILES = [
 ];
 const SECOND_TILES = [
   ['burst', '連写', 'action'], ['auto', '自動撮影', 'timer'], ['zebra', '白飛び警告', 'style'],
-  ['grid', 'グリッド', 'aspect169'], ['level', '水準器', 'flip'], ['peak', 'ピント確認', 'depth'],
+  ['grid', 'グリッド', 'aspect169'], ['level', '水準器', 'level'], ['peak', 'ピント確認', 'depth'],
   ['dim', '画面の暗さ', 'nightOff'], ['settings', '設定', 'more']
 ];
 function buildTiles() {
@@ -224,7 +224,7 @@ function openPicker(kind, anchor) {
   closePicker();
   const opts = kind === 'res' ? [['720', 'HD'], ['1080', 'FHD'], ['2160', '4K']] : [['24', '24'], ['30', '30'], ['60', '60']];
   const cur = kind === 'res' ? String(cfg.videoRes) : String(cfg.fps);
-  const p = mk('div', 'ipicker'); p.id = 'ipicker';
+  const p = mk('div', 'ipicker'); p.id = 'ipicker'; p.classList.add('lgg');
   p.innerHTML = opts.map(([v, l]) => `<button data-v="${v}" class="${v === cur ? 'sel' : ''}">${l}</button>`).join('');
   const r = anchor.getBoundingClientRect(), base = $('#app').getBoundingClientRect();
   p.style.top = (r.top + r.height / 2 - base.top) + 'px';
@@ -311,13 +311,42 @@ function wireZoomPress() {
   zp.addEventListener('click', e => { if (lpFired) { lpFired = false; e.stopPropagation(); e.preventDefault(); } }, true);
 }
 
+/* ---- Liquid Glass: 屈折(Chromium 系のみ)と磨りガラス(Safari / Firefox)----
+   変位マップ(R=x, G=y の押し出し量)を canvas で作り、SVG フィルタの feImage に渡す。
+   縁ほど内側へ引き込む(レンズの縁の屈折)。Safari は backdrop-filter: url() を描かないため使わない。 */
+function refractMap() {
+  const N = 256, c = document.createElement('canvas'); c.width = c.height = N;
+  const x = c.getContext('2d'), img = x.createImageData(N, N), d = img.data;
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+    const nx = (i / (N - 1)) * 2 - 1, ny = (j / (N - 1)) * 2 - 1;
+    const edge = 1 - Math.max(Math.abs(nx), Math.abs(ny));
+    const m = Math.max(0, Math.min(1, (0.42 - edge) / 0.42)), sm = m * m * (3 - 2 * m);
+    const o = (j * N + i) * 4;
+    d[o] = 128 - nx * sm * 120; d[o + 1] = 128 - ny * sm * 120; d[o + 2] = 128; d[o + 3] = 255;
+  }
+  x.putImageData(img, 0, 0);
+  return c.toDataURL();
+}
+function setupGlass() {
+  const ua = navigator.userAgent;
+  const chromium = /Chrome\//.test(ua) && !/CriOS|FxiOS|EdgiOS/.test(ua);
+  if (chromium) document.documentElement.classList.add('lg-refract');
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('width', '0'); svg.setAttribute('height', '0'); svg.setAttribute('aria-hidden', 'true');
+  svg.style.position = 'absolute';
+  svg.innerHTML = `<defs><filter id="lg-refract" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feImage href="${refractMap()}" x="0" y="0" width="100%" height="100%" preserveAspectRatio="none" result="map"/><feDisplacementMap in="SourceGraphic" in2="map" scale="26" xChannelSelector="R" yChannelSelector="G"/></filter></defs>`;
+  document.body.appendChild(svg);
+  ['.ib', '.ipad-top', '#btn-cap', '#btn-flip', '#ib-depth', '.lg', '#modes .ind', '.tile .tc'].forEach(sel => document.querySelectorAll(sel).forEach(e => e.classList.add('lgg')));
+}
+
 /* ---- 初期化 ---- */
 (() => {
   if (!IOS_UI) return;
+  setupGlass();
   const ctl = $('#controls');
   ['#btn-cap', '#zoompanel', '#chip-res', '#chip-lock'].forEach(s => ctl.appendChild($(s)));
   $('#tiles .ex-slot').append(...$$('#zoompanel .slrow'));
-  const fl = $('#btn-flip .ms'); fl.innerHTML = svgI('flip');
+  const fl = $('#btn-flip .ms'); fl.innerHTML = svgI('cameraFlip');
   $('#btn-cap').innerHTML = `<span class="ms">${svgI('more')}</span>`;
   $('#chip-res').onclick = () => openFmt();
   buildTiles();

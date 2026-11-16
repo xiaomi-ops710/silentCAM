@@ -838,7 +838,7 @@ document.addEventListener('click', e => {
    ・起動のたびに sw.js を確認(HTTPキャッシュを使わない)
    ・新しい版が見つかったら、撮影中でない時に自動で読み直す(撮影を邪魔しない)
    ===================================================================== */
-const APP_VERSION = 'v20';
+const APP_VERSION = 'v21';
 let pendingReload = false;
 function busyNow() { return recording || burstRunning || AS.on || !!countdownTimer || (editor && editor.classList.contains('open')); }
 function applyPendingReload() {
