@@ -1,9 +1,9 @@
 'use strict';
 /* =====================================================================
    iOS 風カメラの組み立て(iPhone / iPad)
-   ・上部のアイコン行(フラッシュ・LIVE・比率・連写・タイマー・露出・フォーマット)
+   ・上部のアイコン行(フラッシュ・比率・連写・タイマー・露出・フォーマット)
    ・ズームの長押しで出る目盛りのダイヤル
-   ・「…」のツールシート(参照画像と同じ9項目)、編集ボタンの先に従来の設定
+   ・「…」のツールシート(参照画像と同じ9項目)。長押しで従来の機能
    ・写真のスタイル(保存時に画素を補正)
    ・iPad の右側の操作列(ビデオ: 解像度・FPS / 写真: ライブ・タイマー)
    ===================================================================== */
@@ -57,7 +57,6 @@ function applyStyleCanvas(c) {    // app.js の encodeAndSave から呼ぶ
 
 /* ---- 未対応の機能(Webアプリからは制御できない) ---- */
 const UNSUPPORTED = {
-  live: 'LIVE Photo は Web アプリでは撮れません',
   depth: '被写界深度はWebアプリから調整できません',
   night: 'ナイトモードはWebアプリでは使えません'
 };
@@ -80,52 +79,60 @@ function openExposure() {
 }
 const ACT = {
   flash: () => setTorch(!torchOn),
-  live: () => toast(UNSUPPORTED.live, 2600),
   aspect: cycleAspectCam,
   action: () => $('#btn-burst').click(),
   timer: () => $('#btn-timer').click(),
   exposure: openExposure,
   style: cycleStyle,
+  histo: () => { $('#capmenu input[data-key=histo]').click(); syncTiles(); },
   depth: () => toast(UNSUPPORTED.depth, 2600),
   night: () => toast(UNSUPPORTED.night, 2600),
   format: () => { closeSheet('tiles'); openFmt(); },
-  // 従来の機能(編集ボタンの先のシート)
+  // 長押し「…」の機能シート
   burst: () => $('#btn-burst').click(),
   auto: () => { const o = ['off', 'page', 'interval']; applyCap('auto', o[(o.indexOf(cfg.auto) + 1) % o.length]); syncTiles(); },
-  histo: () => { $('#capmenu input[data-key=histo]').click(); syncTiles(); },
   zebra: () => { $('#capmenu input[data-key=zebra]').click(); syncTiles(); },
   grid: () => { $('#btn-grid').click(); syncTiles(); },
   level: () => { $('#btn-level').click(); syncTiles(); },
   peak: () => { $('#btn-peak').click(); syncTiles(); },
   dim: () => { $('#btn-dim').click(); syncTiles(); },
-  settings: () => { closeSheet('tiles'); closeSheet('tiles2'); $('#btn-settings').click(); }
+  settings: () => { closeSheet('tiles2'); $('#btn-settings').click(); }
 };
 
-/* ---- 「…」のツールシート(参照画像の9項目) ---- */
+/* ---- 「…」のツールシート/* ---- 「…」のツールシート(参照画像の9項目) ---- */
 const MAIN_TILES = [
-  ['flash', 'フラッシュ', 'flashOff'], ['live', 'LIVE', 'liveOff'], ['aspect', 'アスペクト比', 'aspect169'],
+  ['flash', 'フラッシュ', 'flashOff'], ['histo', 'ヒストグラム', 'histo'], ['aspect', 'アスペクト比', 'aspect169'],
   ['timer', 'タイマー', 'timerOff'], ['exposure', '露出', 'exposure'], ['style', 'スタイル', 'style'],
   ['depth', '被写界深度', 'depthOff'], ['night', 'ナイトモード', 'nightOff'], ['format', '解像度', null]
 ];
 const SECOND_TILES = [
-  ['burst', '連写', 'action'], ['auto', '自動撮影', 'timer'], ['histo', 'ヒストグラム', 'exposure'],
-  ['zebra', '白飛び警告', 'style'], ['grid', 'グリッド', 'aspect169'], ['level', '水準器', 'flip'],
-  ['peak', 'ピント確認', 'depth'], ['dim', '画面の暗さ', 'nightOff'], ['settings', '設定', 'more']
+  ['burst', '連写', 'action'], ['auto', '自動撮影', 'timer'], ['zebra', '白飛び警告', 'style'],
+  ['grid', 'グリッド', 'aspect169'], ['level', '水準器', 'flip'], ['peak', 'ピント確認', 'depth'],
+  ['dim', '画面の暗さ', 'nightOff'], ['settings', '設定', 'more']
 ];
 function buildTiles() {
   const grid = $('#tiles .tile-grid');
   grid.innerHTML = MAIN_TILES.map(([act, label]) => `<button class="tile" data-act="${act}"><span class="tc"></span><em>${label}</em></button>`).join('');
   grid.addEventListener('click', e => { const b = e.target.closest('.tile'); if (b && ACT[b.dataset.act]) ACT[b.dataset.act](); });
-  // 編集: 従来の機能を並べたシート
+  // 長押し「…」: 従来の機能を並べたシート
   const s2 = mk('section', 'scrim sheetwrap'); s2.id = 'tiles2'; s2.hidden = true;
-  s2.innerHTML = `<div class="ios-sheet"><div class="grab"></div><div class="fmt-top"><button class="cbtn" id="tiles2-close" aria-label="閉じる"><span class="ms">close</span></button><b>機能</b><span style="width:40px"></span></div><div class="tile-grid">${SECOND_TILES.map(([act, label, icon]) => `<button class="tile" data-act="${act}"><span class="tc"><span class="ms">${svgI(icon)}</span></span><em>${label}</em></button>`).join('')}</div></div>`;
+  s2.innerHTML = `<div class="ios-sheet"><div class="grab"></div><div class="fmt-top"><button class="cbtn" id="tiles2-close" aria-label="閉じる"><span class="ms">close</span></button><b>機能</b><span style="width:40px"></span></div><div class="tile-grid">${SECOND_TILES.map(([act, label, icon]) => `<button class="tile" data-act="${act}"><span class="tc">${svgI(icon)}</span><em>${label}</em></button>`).join('')}</div></div>`;
   document.body.appendChild(s2);
   s2.addEventListener('click', e => { if (e.target === s2) closeSheet('tiles2'); const b = e.target.closest('.tile'); if (b && ACT[b.dataset.act]) ACT[b.dataset.act](); });
   $('#tiles2-close').onclick = () => closeSheet('tiles2');
-  $('#tl-edit').onclick = () => { closeSheet('tiles'); show(s2); syncTiles(); };
+  $('#tl-edit') && $('#tl-edit').remove();   // 本家には「編集」ボタンが無いので外す
   $('#tiles').addEventListener('click', e => { if (e.target.id === 'tiles') closeSheet('tiles'); });
   $('#fmt').addEventListener('click', e => { if (e.target.id === 'fmt') closeSheet('fmt'); });
   $('#fmt-close').onclick = () => closeSheet('fmt');
+  wireCapLong();
+}
+// 「…」を長押しすると機能シート、短く押すとツールシート
+let capT = 0, capLong = false;
+function wireCapLong() {
+  const cap = $('#btn-cap');
+  cap.addEventListener('pointerdown', () => { capLong = false; capT = setTimeout(() => { capLong = true; openSheet('tiles2'); }, 450); });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach(t => cap.addEventListener(t, () => clearTimeout(capT)));
+  cap.onclick = () => { if (capLong) { capLong = false; return; } openSheet('tiles'); };
 }
 function syncTiles() {
   if (!$('#tiles .tile-grid').children.length) return;
@@ -140,7 +147,7 @@ function syncTiles() {
     if (act === 'format') tc.innerHTML = `<span class="fmtTxt">${resHtml()}</span>`;
     else tc.innerHTML = svgI(ICON[act] || (def && def[2]) || 'more');
     b.classList.toggle('on', !!st[act]);
-    b.classList.toggle('dim', act === 'live' || act === 'depth' || act === 'night');
+    b.classList.toggle('dim', act === 'depth' || act === 'night');
     if (act === 'timer') b.querySelector('em').textContent = cfg.timer ? `タイマー ${cfg.timer}秒` : 'タイマー';
     if (act === 'aspect') b.querySelector('em').textContent = cfg.aspect === 'full' ? 'アスペクト比' : `比率 ${cfg.aspect}`;
   });
@@ -149,14 +156,14 @@ function openSheet(id) { if (id === 'tiles') syncTiles(); show($('#' + id)); }
 function closeSheet(id) { hide($('#' + id)); }
 
 /* ---- 上部のアイコン行(iPhone) ---- */
-const TOP_ITEMS = ['flash', 'live', 'aspect', 'action', 'timer', 'ev', 'fmt'];
+const TOP_ITEMS = ['flash', 'aspect', 'action', 'timer', 'ev', 'fmt'];
 function buildTop() {
   const t = mk('div', 'topicons'); t.id = 'topicons'; t.classList.add('iphone-only');
   t.innerHTML = TOP_ITEMS.map(k => `<button class="tb" data-k="${k}" aria-label="${k}"></button>`).join('');
   t.addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
     const k = b.dataset.k;
-    if (k === 'flash') ACT.flash(); else if (k === 'live') ACT.live(); else if (k === 'aspect') ACT.aspect();
+    if (k === 'flash') ACT.flash(); else if (k === 'aspect') ACT.aspect();
     else if (k === 'action') ACT.action(); else if (k === 'timer') ACT.timer(); else if (k === 'ev') openExposure(); else if (k === 'fmt') ACT.format();
   });
   $('#controls').appendChild(t);
@@ -165,7 +172,6 @@ function evValue() { const s = $('#expslider'); return s ? Number(s.value) || 0 
 function syncTop() {
   const map = {
     flash: [torchOn ? 'flashOn' : 'flashOff', torchOn],
-    live: ['liveOff', false],
     aspect: ['aspect169', cfg.aspect !== 'full'],
     action: [cfg.burstMode ? 'action' : 'actionOff', !!cfg.burstMode],
     timer: [cfg.timer > 0 ? 'timer' : 'timerOff', cfg.timer > 0]
@@ -182,9 +188,8 @@ function syncTop() {
       b.innerHTML = `<span class="fmtTxt">${resHtml()}</span>`;
     } else {
       const [icon, on] = map[k];
-      b.innerHTML = svgI(icon);
+      if (b.dataset.icon !== icon) { b.innerHTML = `<span class="ico-wrap">${svgI(icon)}</span>`; b.dataset.icon = icon; }
       b.classList.toggle('on', on);
-      b.classList.toggle('dim', k === 'live');
     }
   });
   // iPad の右側の操作列
@@ -192,27 +197,50 @@ function syncTop() {
   const resName = { 2160: '4K', 1080: 'FHD', 720: 'HD' }[cfg.videoRes] || 'FHD';
   ib('#ib-res', `<b>${resName}</b><small>RES</small>`);
   ib('#ib-fps', `<b>${Math.round(Number(cfg.fps) || 30)}</b><small>FPS</small>`);
-  ib('#ib-live', svgI('liveOff'));
+  ib('#ib-aspect', svgI('aspect169'), cfg.aspect !== 'full');
   ib('#ib-timer2', svgI(cfg.timer > 0 ? 'timer' : 'timerOff'), cfg.timer > 0);
   ib('#ib-depth', svgI('depth'));
-  const flipB = $('#btn-flip .ms'); if (flipB && !flipB.dataset.svg) { flipB.innerHTML = svgI('flip'); flipB.dataset.svg = '1'; }
 }
 
 /* ---- iPad の右側の操作列 / iPhone の下段の補助ボタン ---- */
 function buildSideButtons() {
   const ctl = $('#controls');
   const defs = [
-    ['ib-res', 'ipad-video', 'ipad-top s1', () => openFmt(), '解像度'],
-    ['ib-fps', 'ipad-video', 'ipad-top s2', () => openFmt(), 'フレームレート'],
-    ['ib-live', 'ipad-photo', 'ipad-top s1', () => ACT.live(), 'LIVE'],
+    ['ib-res', 'ipad-video', 'ipad-top s1', b => openPicker('res', b), '解像度'],
+    ['ib-fps', 'ipad-video', 'ipad-top s2', b => openPicker('fps', b), 'フレームレート'],
+    ['ib-aspect', 'ipad-photo', 'ipad-top s1', () => cycleAspectCam(), '比率'],
     ['ib-timer2', 'ipad-photo', 'ipad-top s2', () => ACT.timer(), 'タイマー'],
-    ['ib-depth', 'iphone-only', 'iphone-depth', () => ACT.depth(), '被写界深度']
+    ['ib-depth', 'iphone-only iphone-depth', '', () => ACT.depth(), '被写界深度']
   ];
   defs.forEach(([id, cls, pos, fn, label]) => {
-    const b = mk('button', `${pos} ${cls}`); b.id = id; b.setAttribute('aria-label', label);
-    b.onclick = fn; ctl.appendChild(b);
+    const b = mk('button', `${pos} ${cls}`.trim()); b.id = id; b.setAttribute('aria-label', label);
+    b.onclick = () => fn(b); ctl.appendChild(b);
   });
 }
+
+/* ---- iPad: 解像度・FPS をタップで選ぶピッカー(参照画像の横長のカプセル) ---- */
+let pickerEl = null;
+function openPicker(kind, anchor) {
+  closePicker();
+  const opts = kind === 'res' ? [['720', 'HD'], ['1080', 'FHD'], ['2160', '4K']] : [['24', '24'], ['30', '30'], ['60', '60']];
+  const cur = kind === 'res' ? String(cfg.videoRes) : String(cfg.fps);
+  const p = mk('div', 'ipicker'); p.id = 'ipicker';
+  p.innerHTML = opts.map(([v, l]) => `<button data-v="${v}" class="${v === cur ? 'sel' : ''}">${l}</button>`).join('');
+  const r = anchor.getBoundingClientRect(), base = $('#app').getBoundingClientRect();
+  p.style.top = (r.top + r.height / 2 - base.top) + 'px';
+  p.style.right = (base.right - r.left + 12) + 'px';
+  $('#controls').appendChild(p);
+  requestAnimationFrame(() => p.classList.add('open'));
+  p.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    const v = b.dataset.v;
+    applyKey(kind === 'res' ? 'videoRes' : 'fps', kind === 'res' ? v : Number(v));
+    closePicker(); syncTop();
+  });
+  pickerEl = p;
+}
+function closePicker() { if (pickerEl) { pickerEl.remove(); pickerEl = null; } }
+document.addEventListener('pointerdown', e => { if (pickerEl && !e.target.closest('#ipicker') && !e.target.closest('.ipad-top')) closePicker(); }, true);
 
 /* ---- ズームのダイヤル(iPhone: 長押し) ---- */
 const DIAL = { cx: 196.5, cy: 330, R: 322, W: 393, H: 340 };
@@ -266,7 +294,7 @@ let dialZ = 1;
 function syncDial(z) {
   const g = $('#zdial-g'); if (!g) return;
   const v = z != null ? z : shownZoom(); dialZ = v;
-  g.setAttribute('transform', `rotate(${(-dialAngle(v)).toFixed(2)} ${DIAL.cx} ${DIAL.cy})`);
+  g.style.transform = `rotate(${(-dialAngle(v)).toFixed(2)}deg)`;
   const big = $('#zdial-big'), mm = $('#zdial-mm');
   if (big) big.textContent = (v % 1 === 0 ? v.toFixed(0) : v.toFixed(1)) + '×';
   if (mm) mm.textContent = v === 1 ? '26MM' : (v < 1 ? '13MM' : '');
@@ -291,7 +319,6 @@ function wireZoomPress() {
   $('#tiles .ex-slot').append(...$$('#zoompanel .slrow'));
   const fl = $('#btn-flip .ms'); fl.innerHTML = svgI('flip');
   $('#btn-cap').innerHTML = `<span class="ms">${svgI('more')}</span>`;
-  $('#btn-cap').onclick = () => openSheet('tiles');
   $('#chip-res').onclick = () => openFmt();
   buildTiles();
   buildTop();

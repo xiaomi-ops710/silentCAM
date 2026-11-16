@@ -837,3 +837,47 @@ html.ios.ipad #modes .mode.sel{color:#FFD60A}
 html.ios.ipad #modes .ind{height:48px;border-radius:24px;background:rgba(40,40,44,.55);-webkit-backdrop-filter:blur(22px) saturate(180%);backdrop-filter:blur(22px) saturate(180%);box-shadow:inset 0 1px 0 rgba(255,255,255,.2)}
 html.ios.ipad #zoompanel,html.ios.ipad #zoompanel.show{top:calc(48.6% - 22px);left:3%;bottom:auto;right:auto}
 html.ios.ipad #zoompresets button.sel{width:44px;height:44px}
+
+/* =====================================================================
+   v20: 本家の質感に寄せた調整 + アニメーション + iPad のピッカー
+   ===================================================================== */
+/* ---- 「…」のツールシート: 本家の大きい角丸・半透明のガラス ---- */
+#tiles .ios-sheet,#tiles2 .ios-sheet{background:rgba(34,34,37,.74);border-radius:56px 56px 0 0;padding:16px 22px calc(var(--sab) + 26px);box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 -10px 40px rgba(0,0,0,.35)}
+#tiles .tile-grid,#tiles2 .tile-grid{gap:24px 4px;padding:8px 0 6px}
+#tiles .tile,#tiles2 .tile{gap:10px}
+#tiles .tile .tc,#tiles2 .tile .tc{width:70px;height:70px;background:rgba(64,64,68,.86);transition:transform .22s cubic-bezier(.3,.7,.3,1),background .3s,box-shadow .3s;box-shadow:inset 0 1px 0 rgba(255,255,255,.12)}
+#tiles .tile .tc svg,#tiles2 .tile .tc svg{width:34px;height:34px;color:#fff}
+#tiles .tile em,#tiles2 .tile em{font-size:15px;font-weight:400;letter-spacing:.01em;color:#fff;line-height:1.15;margin-top:2px}
+#tiles .tile:active .tc,#tiles2 .tile:active .tc{transform:scale(.9)}
+#tiles .tile[data-act=aspect] .tc svg,#tiles .tile[data-act=exposure] .tc svg{color:#FFD60A}
+#tiles .tile.on .tc{background:rgba(255,214,10,.22);box-shadow:inset 0 0 0 1.5px rgba(255,214,10,.55)}
+#tiles .tile.on .tc svg{color:#FFD60A}
+#tiles .tile.dim .tc{opacity:.45}
+#tiles .tile .fmtTxt b{font-size:17px;font-weight:600;letter-spacing:.02em}
+#tiles .tile .fmtTxt small{font-size:12px;font-weight:500}
+#tiles .ex-slot.open{animation:fadeUp .3s cubic-bezier(.3,.7,.3,1)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.grab{width:40px;height:5px;margin:0 auto 18px;background:rgba(255,255,255,.4)}
+
+/* ---- 押したときの縮み・アイコンのポップ ---- */
+html.ios .ib,html.ios .ipad-top,html.ios .tb,html.ios #btn-cap,html.ios #btn-flip,html.ios #btn-gallery,html.ios #ib-depth,html.ios #shutter{transition:transform .2s cubic-bezier(.3,.7,.3,1),background .3s,color .3s}
+html.ios .ib:active,html.ios .ipad-top:active,html.ios .tb:active,html.ios #btn-cap:active,html.ios #btn-flip:active,html.ios #ib-depth:active{transform:scale(.88)}
+html.ios .tb .ico-wrap{display:grid;place-items:center}
+@keyframes pop{0%{transform:scale(.7)}55%{transform:scale(1.14)}100%{transform:scale(1)}}
+html.ios .tb.on .ico-wrap svg,html.ios .ipad-top.on svg{animation:pop .38s cubic-bezier(.3,.7,.3,1)}
+html.ios .tb[data-k=ev] .evv{transition:opacity .2s}
+
+/* ---- ズームのダイヤル(回転のアニメーション・出現) ---- */
+#zdial-g{transform-origin:196.5px 330px;transition:transform .45s cubic-bezier(.2,.9,.3,1)}
+#zdial:not([hidden]){animation:dialIn .38s cubic-bezier(.2,.9,.3,1)}
+@keyframes dialIn{from{opacity:0;transform:translateY(28px) scale(.97)}to{opacity:1;transform:none}}
+#zdial .dlab{transition:fill .3s}
+
+/* ---- iPad: 解像度・FPS のピッカー(横長のカプセル。選択中は黄色) ---- */
+#ipicker{position:absolute;display:flex;align-items:center;gap:4px;padding:6px 10px;border-radius:999px;background:rgba(36,36,40,.62);-webkit-backdrop-filter:blur(26px) saturate(180%);backdrop-filter:blur(26px) saturate(180%);box-shadow:inset 0 1px 0 rgba(255,255,255,.2),0 10px 28px rgba(0,0,0,.35);transform:translateX(16px) scale(.92);opacity:0;transition:transform .32s cubic-bezier(.2,.9,.3,1),opacity .24s;z-index:6;transform-origin:right center;translate:0 -50%}
+#ipicker.open{transform:none;opacity:1}
+#ipicker button{min-width:56px;height:52px;padding:0 12px;border-radius:999px;background:none;color:#fff;font-size:21px;font-weight:500;transition:background .2s,color .2s,transform .15s}
+#ipicker button:active{transform:scale(.92)}
+#ipicker button.sel{color:#FFD60A}
+html.ipad #ipicker{top:0}
+html.ios.ipad #ib-aspect{top:calc(22% - 28px)}

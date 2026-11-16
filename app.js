@@ -34,6 +34,7 @@ const DEF = {
 };
 let cfg = { ...DEF };
 try { Object.assign(cfg, JSON.parse(localStorage.getItem('silentcam-cfg') || '{}')); } catch (_) {}
+cfg.zebra = false; cfg.histo = false;   // 白飛び警告・ヒストグラムは起動のたびにオフ
 const saveCfg = () => { try { localStorage.setItem('silentcam-cfg', JSON.stringify(cfg)); } catch (_) {} };
 
 /* ---------- トースト / ダイアログ ---------- */
@@ -140,7 +141,7 @@ async function getStream(isVideo, withAudio) {
   const fps = isVideo ? Number(cfg.fps) : 30;
   const base = lensId ? { deviceId: { exact: lensId } } : { facingMode: { ideal: cfg.facing } };
   const attempts = [
-    { ...base, width: { ideal: w }, height: { ideal: h }, frameRate: { ideal: fps } },
+    isVideo ? { ...base, width: { ideal: w }, height: { ideal: h }, frameRate: { ideal: fps } } : { ...base, width: { ideal: w }, height: { ideal: h } },
     { ...base, width: { ideal: w }, height: { ideal: h } },
     { ...base }
   ];
@@ -190,6 +191,7 @@ async function _startCamera() {
   track = stream.getVideoTracks()[0];
   track.addEventListener('ended', () => { if (!recording) setTimeout(startCamera, 400); });
   detectLenses();
+  watchFrames();
 
   const caps = track.getCapabilities ? track.getCapabilities() : {};
   hwZoom = !!(caps.zoom && caps.zoom.max > caps.zoom.min);
@@ -836,7 +838,7 @@ document.addEventListener('click', e => {
    ・起動のたびに sw.js を確認(HTTPキャッシュを使わない)
    ・新しい版が見つかったら、撮影中でない時に自動で読み直す(撮影を邪魔しない)
    ===================================================================== */
-const APP_VERSION = 'v19';
+const APP_VERSION = 'v20';
 let pendingReload = false;
 function busyNow() { return recording || burstRunning || AS.on || !!countdownTimer || (editor && editor.classList.contains('open')); }
 function applyPendingReload() {
@@ -985,4 +987,19 @@ function choosePreset(z) {
   }
   if (lensId) { lensId = null; zoom = z; fx = fy = .5; startCamera(); return; }
   setZoom(z);
+}
+
+
+/* ---------- 映像の見張り(真っ暗・映像が来ない時の回復) ----------
+   起動後に映像の大きさが分からないままなら、超広角を外すか、もう一度起動し直す */
+let watchT = 0, watchRetry = 0;
+function watchFrames() {
+  clearTimeout(watchT);
+  watchT = setTimeout(() => {
+    if (!stream) return;
+    if (video.videoWidth > 0) { watchRetry = 0; return; }
+    if (lensId) { lensId = null; toast('超広角の映像が出なかったので、標準に戻します', 3000); startCamera(); return; }
+    if (watchRetry < 1) { watchRetry++; toast('映像が出ないため、カメラを起動し直します', 2400); startCamera(); }
+    else toast('映像が出ません。Safari を再読み込みしてください', 4000);
+  }, 2500);
 }
