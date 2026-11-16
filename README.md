@@ -82,7 +82,7 @@ icons.css                          アイコン名→文字コード対応
 .github/workflows/pages.yml        GitHub Pages 自動デプロイ
 ```
 
-更新時は `sw.js` の `VERSION`(現在 `v15`)と `app.js` の `APP_VERSION` を上げてください。キャッシュ名(`silentcam-shell-v15`)が変わり、古いキャッシュは自動で削除されます。
+更新時は `sw.js` の `VERSION`(現在 `v16`)と `app.js` の `APP_VERSION` を上げてください。キャッシュ名(`silentcam-shell-v16`)が変わり、古いキャッシュは自動で削除されます。
 
 ## ライセンス
 アイコンは Google の [Material Symbols](https://github.com/google/material-design-icons)(Apache License 2.0)から、使用している分だけを抽出して同梱しています。

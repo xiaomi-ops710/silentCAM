@@ -51,7 +51,7 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;paddin
 
 /* ===== レイアウト ===== */
 #app{position:fixed;inset:0;display:grid;grid-template-columns:1fr var(--ctl);
-  padding:var(--sat) var(--sar) var(--sab) var(--sal);background:#000}
+  padding:var(--sat) var(--sar) 0 var(--sal);background:#000}
 #stage{position:relative;display:grid;place-items:center;overflow:hidden;min-width:0;min-height:0;padding:0}
 #viewport{position:relative;overflow:hidden;background:#0b0b0b;border-radius:22px;width:100%;aspect-ratio:4/3;max-width:100%;max-height:100%;touch-action:none;
   transition:width .34s var(--ease),height .34s var(--ease),border-radius .3s;animation:fade .6s var(--ease) backwards}
@@ -61,7 +61,7 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;paddin
 #video{width:100%;height:100%;object-fit:cover;display:block;background:#000}
 #video.mirror{transform:scaleX(-1)}
 
-#controls{display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:14px 0;gap:10px}
+#controls{display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:14px 0 calc(14px + var(--sab));gap:10px}
 #controls>*{animation:riseR .55s var(--ease) backwards}
 #controls>*:nth-child(1){animation-delay:.05s}#controls>*:nth-child(2){animation-delay:.1s}#controls>*:nth-child(3){animation-delay:.15s}
 #controls>*:nth-child(4){animation-delay:.2s}#controls>*:nth-child(5){animation-delay:.27s}#controls>*:nth-child(6){animation-delay:.33s}
@@ -69,7 +69,7 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;paddin
 
 @media (orientation:portrait){
   #app{grid-template-columns:1fr;grid-template-rows:1fr var(--ctlh)}
-  #controls{display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:auto 1fr;justify-items:center;align-items:center;padding:6px 14px 10px}
+  #controls{display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:auto 1fr;justify-items:center;align-items:center;padding:6px 14px calc(10px + var(--sab))}
   #controls>*{animation-name:rise}
   #modes{grid-row:1;grid-column:1/-1;flex-direction:row!important}
   #btn-gallery{grid-row:2;grid-column:1}
@@ -485,7 +485,7 @@ input[type=range]::-moz-range-track{height:8px;border-radius:4px;background:#585
 input[type=range]::-moz-range-progress{height:8px;border-radius:4px;background:#3D8BFF}
 input[type=range]::-moz-range-thumb{width:34px;height:26px;border-radius:13px;background:#fff;border:0;box-shadow:0 2px 7px rgba(0,0,0,.35)}
 
-@media (max-width:699px){:root{--sat:env(safe-area-inset-top);--sar:env(safe-area-inset-right);--sab:env(safe-area-inset-bottom);--sal:env(safe-area-inset-left)}}
+@media (max-width:699px){:root{--sat:env(safe-area-inset-top);--sar:env(safe-area-inset-right);--sab:env(safe-area-inset-bottom);--sal:env(safe-area-inset-left);--ctlh:calc(218px + var(--sab))}}
 
 /* ===== ギャラリー: 写真Appに近いヘッダー(左寄せの大見出し+項目数) ===== */
 #g-top{grid-template-columns:auto 1fr auto;gap:10px}
@@ -528,3 +528,166 @@ input[type=range]::-moz-range-thumb{width:34px;height:26px;border-radius:13px;ba
 #settings .grp{animation:popIn .45s var(--ease) both}
 #settings .grp:nth-of-type(2){animation-delay:.04s}#settings .grp:nth-of-type(3){animation-delay:.08s}#settings .grp:nth-of-type(4){animation-delay:.12s}
 #gallery .g-head{animation:fadeIn .4s var(--ease) both}
+
+/* ===== 下端の未描画帯の対策(ホーム画面追加のPWA)=====
+   固定配置の要素は innerHeight より短く描画されることがあるため、実際の表示高に合わせる */
+html{height:100%;height:-webkit-fill-available;height:100dvh}
+body{height:100%;height:-webkit-fill-available;height:100dvh}
+#app,.sheet,.scrim{height:100%;height:-webkit-fill-available;height:100dvh}
+
+/* ===== iPhone(iOS)の標準カメラ風レイアウト(html.ios)=====
+   ・写真は4:3のフレームを上部いっぱいに表示し、下の黒い帯にズーム・モード・シャッターを置く
+   ・選択中のモードとズームは黄色の文字、それ以外は半透明の白 */
+html.ios #stage{place-items:start center;padding:0}
+html.ios #viewport{border-radius:0;background:#000}
+html.ios #viewport.fill{border-radius:0}
+html.ios #topbar{top:12px;left:16px;right:16px}
+html.ios .chip{height:32px;border-radius:16px;background:rgba(28,28,30,.55);font-size:13px;font-weight:600}
+html.ios .ib{background:rgba(44,44,46,.55);color:#fff}
+html.ios .ib.sm{width:40px;height:40px}
+html.ios .ib.sm .ms{font-size:20px}
+html.ios .zoombtn{left:50%;top:auto;bottom:14px;margin:0 0 0 -21px;width:42px;height:42px;font-size:15px;font-weight:600;color:#FFD60A;background:rgba(28,28,30,.55)}
+html.ios #zoompanel,html.ios #zoompanel.show{left:50%;top:auto;bottom:70px;width:min(340px,86%);transform:translateX(-50%) scale(1)}
+html.ios #zoompanel:not(.show){transform:translateX(-50%) translateY(10px) scale(.94)}
+html.ios #modes{flex-direction:row!important;justify-content:center;gap:4px}
+html.ios #modes .ind{display:none}
+html.ios #modes .mode{padding:6px 14px;font-size:15px;font-weight:600;letter-spacing:0;color:rgba(255,255,255,.55);background:none;opacity:1}
+html.ios #modes .mode.sel{color:#FFD60A;opacity:1}
+html.ios #shutter{width:80px;height:80px;border-width:4px;border-color:#fff}
+html.ios #shutter-in{width:66px;height:66px}
+html.ios #btn-gallery{width:46px;height:46px;border-radius:9px;border:0}
+html.ios #btn-gallery:active{border-radius:14px}
+html.ios #btn-flip,html.ios #btn-burst,html.ios #btn-timer{width:46px;height:46px;background:rgba(118,118,128,.28)}
+html.ios #btn-flip .ms{font-size:24px}
+
+/* =====================================================================
+   iOS 26 風カメラ(html.ios)
+   ・上部は文字とアイコンだけ(カプセルなし)、ズーム行・シャッター行は映像の上に重ねる
+   ・下部バーは「サムネ | モードのカプセル | 切替」。すべてガラス調(Liquid Glass 風)
+   ===================================================================== */
+.lg,
+html.ios #modes,html.ios #btn-cap,html.ios #btn-flip,html.ios #btn-burst,
+html.ios #btn-cap{background:rgba(40,40,44,.42);-webkit-backdrop-filter:blur(22px) saturate(180%);backdrop-filter:blur(22px) saturate(180%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.22),inset 0 0 0 .5px rgba(255,255,255,.14),0 8px 24px rgba(0,0,0,.28)}
+
+html.ios{--barH:calc(var(--sab) + 64px)}
+html.ios #app{display:block}
+html.ios #stage{position:absolute;top:var(--sat);left:var(--sal);right:var(--sar);bottom:var(--barH);padding:0}
+html.ios #viewport,html.ios #viewport.fill{border-radius:0}
+html.ios #controls{position:absolute;inset:0;display:block;padding:0;gap:0;pointer-events:none;animation:none}
+html.ios #controls>*{pointer-events:auto}
+html.ios #topbar,html.ios #zoombtn,html.ios #chip-silent{display:none!important}
+
+/* 上部の表示(タイマー・解像度・AE/AF) */
+html.ios #btn-timer{position:absolute;top:calc(var(--sat) + 6px);left:calc(50% - 88px);width:44px;height:44px;background:none;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+html.ios #btn-timer .ms{font-size:24px}
+html.ios #btn-timer.on,html.ios #btn-burst.on{color:#FFD60A}
+html.ios #btn-timer .sub{color:#FFD60A}
+html.ios #chip-res{position:absolute;top:calc(var(--sat) + 6px);left:calc(50% + 43px);width:44px;height:44px;padding:0;border-radius:0;background:none;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;flex-direction:column;align-items:center;justify-content:center;gap:0;line-height:1}
+html.ios #chip-res b{font-size:14px;font-weight:600;color:#fff}
+html.ios #chip-res small{font-size:11px;font-weight:500;color:#fff;margin-top:2px}
+html.ios #chip-lock{position:absolute;top:calc(var(--sat) + 12px);left:calc(50% - 150px);height:30px;background:none;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+
+/* ズーム行(映像の下端の上) */
+html.ios #zoompanel,html.ios #zoompanel.show{position:absolute;left:0;right:0;top:auto;bottom:calc(var(--sab) + 192px);width:auto;transform:none!important;opacity:1!important;visibility:visible!important;padding:0;border:0;background:none;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;display:flex;justify-content:center;pointer-events:none}
+html.ios #zoompanel .slrow{display:none}
+html.ios #zoompresets{display:flex;gap:6px;margin:0;pointer-events:auto;background:none;flex-wrap:nowrap}
+html.ios #zoompresets button{width:40px;height:40px;min-width:0;border-radius:50%;background:none;color:#fff;font-size:15px;font-weight:600;padding:0;box-shadow:none}
+html.ios #zoompresets button.sel{color:#FFD60A;background:rgba(40,40,44,.5);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
+html.ios #zoompresets button:nth-child(n+4){display:none}
+
+/* シャッター行 */
+html.ios #shutter-wrap{position:absolute;left:50%;bottom:calc(var(--sab) + 83px);transform:translateX(-50%);width:88px;height:88px;display:grid;place-items:center}
+html.ios #shutter{width:80px;height:80px;border-width:4px;border-color:#fff}
+html.ios #shutter-in{width:66px;height:66px}
+html.ios #btn-burst{position:absolute;left:34px;bottom:calc(var(--sab) + 100px);width:48px;height:48px;border-radius:50%}
+html.ios #btn-cap{position:absolute;right:34px;bottom:calc(var(--sab) + 100px);width:48px;height:48px;border-radius:50%}
+html.ios #btn-cap .ms,html.ios #btn-burst .ms{font-size:24px}
+
+/* 下部バー */
+html.ios #btn-gallery{position:absolute;left:41px;bottom:calc(var(--sab) + 4px);width:34px;height:44px;border-radius:7px;border:0}
+html.ios #btn-flip{position:absolute;right:34px;bottom:calc(var(--sab) + 2px);width:48px;height:48px;border-radius:50%}
+html.ios #btn-flip .ms{font-size:24px}
+html.ios #modes{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(var(--sab) + 3px);width:213px;height:44px;padding:4px;border-radius:22px;flex-direction:row!important;justify-content:space-between;align-items:center;gap:0}
+html.ios #modes .mode{flex:1;padding:6px 0;text-align:center;font-size:15px;font-weight:600;letter-spacing:0;color:rgba(255,255,255,.68);background:none;opacity:1}
+html.ios #modes .mode.sel{color:#FFD60A}
+html.ios #modes .ind{background:rgba(255,255,255,.16);box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 2px 8px rgba(0,0,0,.25)}
+
+/* ---- シート(コントロール / フォーマット) ---- */
+.sheetwrap{align-items:flex-end;justify-content:center;background:rgba(0,0,0,.3)}
+.ios-sheet{position:relative;width:100%;max-width:520px;max-height:86%;overflow:auto;background:rgba(30,30,34,.74);-webkit-backdrop-filter:blur(40px) saturate(180%);backdrop-filter:blur(40px) saturate(180%);
+  border-radius:38px 38px 0 0;padding:10px 18px calc(var(--sab) + 24px);box-shadow:inset 0 1px 0 rgba(255,255,255,.18);animation:sheetUp .36s var(--ease);color:#fff}
+@keyframes sheetUp{from{transform:translateY(100%)}to{transform:none}}
+.grab{width:38px;height:5px;border-radius:3px;background:rgba(255,255,255,.35);margin:0 auto 14px}
+.pill{height:34px;padding:0 16px;border-radius:17px;background:rgba(70,70,74,.7);color:#fff;font-size:15px;font-weight:500}
+.tiles-top{display:flex;justify-content:flex-start;margin-bottom:6px}
+.tile-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px 8px;padding:6px 0 12px}
+.tile{display:flex;flex-direction:column;align-items:center;gap:8px;color:#fff;background:none}
+.tile .tc{width:62px;height:62px;border-radius:50%;display:grid;place-items:center;background:rgba(66,66,70,.7);box-shadow:inset 0 1px 0 rgba(255,255,255,.16)}
+.tile .tc .ms{font-size:26px;color:#fff}
+.tile em{font-style:normal;font-size:13px;line-height:1.2;text-align:center;color:#fff}
+.tile.on .tc{background:rgba(255,214,10,.22)}
+.tile.on .tc .ms{color:#FFD60A}
+.ex-slot{display:none;padding:4px 0 8px}
+.ex-slot.open{display:block}
+.ex-slot .slrow{display:flex;align-items:center;gap:10px;padding:8px 0;color:#fff}
+.ex-slot input[type=range]{flex:1}
+.fmt-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.fmt-top b{font-size:17px;font-weight:600;color:#fff}
+.cbtn{width:40px;height:40px;border-radius:50%;background:rgba(70,70,74,.7);display:grid;place-items:center;color:#fff}
+.frow{padding:14px 6px;border-top:.5px solid rgba(255,255,255,.14)}
+.frow .lab{font-size:15px;color:rgba(255,255,255,.7);margin-bottom:10px}
+.opts{display:flex;justify-content:space-around;align-items:center}
+.opts button{display:flex;align-items:center;gap:6px;font-size:20px;font-weight:600;color:#fff;background:none;padding:8px 10px}
+.opts button.sel{color:#FFD60A}
+.opts button.sel::before{content:"";width:6px;height:6px;border-radius:50%;background:#FFD60A}
+
+/* ===================================================================
+   写真編集(iOS の「写真」編集に準拠)
+   =================================================================== */
+#pedit{background:#000}
+#pedit .pe-top{display:flex;justify-content:space-between;align-items:center;padding:6px 16px}
+.lg.round{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;color:#fff;border:0}
+.lg.round .ms{font-size:22px}
+.pe-bar2{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:4px 16px 10px}
+.lg.pill{display:flex;align-items:center;height:44px;border-radius:22px;padding:0 3px}
+.lg.pill button{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;color:#fff;background:none}
+.lg.pill button:disabled{opacity:.3}
+.lg.pill .ms{font-size:22px}
+.pe-bar2 b{font-size:17px;font-weight:600;color:#fff;white-space:nowrap}
+#pe-stage{flex:1;min-height:0;display:grid;place-items:center;overflow:hidden;position:relative}
+#pe-wrap{position:relative}
+#pe-canvas{display:block;width:100%;height:100%}
+#pe-crop{position:absolute;box-sizing:border-box;border:1.5px solid rgba(255,255,255,.95);box-shadow:0 0 0 9999px rgba(0,0,0,.55);touch-action:none}
+#pe-crop .area{position:absolute;inset:0;display:block;cursor:move;
+  background-image:linear-gradient(90deg,transparent calc(33.33% - .5px),rgba(255,255,255,.4) calc(33.33% - .5px),rgba(255,255,255,.4) calc(33.33% + .5px),transparent calc(33.33% + .5px),transparent calc(66.66% - .5px),rgba(255,255,255,.4) calc(66.66% - .5px),rgba(255,255,255,.4) calc(66.66% + .5px),transparent calc(66.66% + .5px)),
+    linear-gradient(180deg,transparent calc(33.33% - .5px),rgba(255,255,255,.4) calc(33.33% - .5px),rgba(255,255,255,.4) calc(33.33% + .5px),transparent calc(33.33% + .5px),transparent calc(66.66% - .5px),rgba(255,255,255,.4) calc(66.66% - .5px),rgba(255,255,255,.4) calc(66.66% + .5px),transparent calc(66.66% + .5px))}
+#pe-crop .hd{position:absolute;display:block;z-index:2}
+#pe-crop .hd[data-h=nw]{left:-4px;top:-4px;width:24px;height:24px;border-left:4px solid #fff;border-top:4px solid #fff;border-radius:3px 0 0 0}
+#pe-crop .hd[data-h=ne]{right:-4px;top:-4px;width:24px;height:24px;border-right:4px solid #fff;border-top:4px solid #fff;border-radius:0 3px 0 0}
+#pe-crop .hd[data-h=sw]{left:-4px;bottom:-4px;width:24px;height:24px;border-left:4px solid #fff;border-bottom:4px solid #fff;border-radius:0 0 0 3px}
+#pe-crop .hd[data-h=se]{right:-4px;bottom:-4px;width:24px;height:24px;border-right:4px solid #fff;border-bottom:4px solid #fff;border-radius:0 0 3px 0}
+#pe-crop .hd[data-h=n]{left:50%;top:-3px;width:36px;height:4px;margin-left:-18px;background:#fff;border-radius:2px}
+#pe-crop .hd[data-h=s]{left:50%;bottom:-3px;width:36px;height:4px;margin-left:-18px;background:#fff;border-radius:2px}
+#pe-crop .hd[data-h=w]{top:50%;left:-3px;width:4px;height:36px;margin-top:-18px;background:#fff;border-radius:2px}
+#pe-crop .hd[data-h=e]{top:50%;right:-3px;width:4px;height:36px;margin-top:-18px;background:#fff;border-radius:2px}
+#pe-tool{min-height:132px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:12px;padding:8px 0 10px}
+.pe-lbl{font-size:15px;font-weight:600;color:#fff;height:20px;line-height:20px}
+.pe-circles{display:flex;gap:12px;overflow-x:auto;max-width:100%;padding:4px 16px;scrollbar-width:none}
+.pe-circles::-webkit-scrollbar{display:none}
+.pe-c{flex:none;width:52px;height:52px;border-radius:50%;display:grid;place-items:center;background:rgba(58,58,62,.92);color:#fff;border:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.12)}
+.pe-c .ms{font-size:24px}
+.pe-c.on{background:rgba(236,236,240,.94);color:#111}
+.pe-ruler{position:relative;width:300px;height:36px;overflow:hidden;touch-action:none;cursor:ew-resize}
+.pe-ticks{position:absolute;left:-250px;top:0;width:800px;height:100%;background:repeating-linear-gradient(90deg,rgba(255,255,255,.55) 0 1.5px,transparent 1.5px 9px)}
+.pe-mark{position:absolute;left:50%;top:-2px;width:2.5px;height:40px;margin-left:-1.25px;background:#FFD60A;border-radius:2px}
+.pe-strip{display:flex;gap:8px;overflow-x:auto;width:100%;padding:4px 16px;box-sizing:border-box;scrollbar-width:none}
+.pe-strip::-webkit-scrollbar{display:none}
+.pe-th{flex:none;padding:0;border-radius:10px;overflow:hidden;border:2px solid transparent;background:none}
+.pe-th canvas{display:block;width:76px;height:auto;border-radius:8px}
+.pe-th.sel{border-color:#fff}
+#pe-tabs{position:relative;display:flex;margin:0 16px calc(var(--sab) + 4px);height:66px;border-radius:33px;padding:0 6px;align-items:center}
+#pe-tabs button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:none;color:rgba(255,255,255,.55);font-size:11px;font-weight:500}
+#pe-tabs button .ms{font-size:24px}
+#pe-tabs button.on{color:#fff}
+#pe-tabs .tri{position:absolute;top:-9px;width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:6px solid #FFD60A;transition:left .3s var(--ease)}

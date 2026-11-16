@@ -2,6 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
+<script>if(/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1))document.documentElement.classList.add("ios");</script>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -179,6 +180,37 @@
     <div class="vi-card"><button class="vi-row" id="vi-hide"></button></div>
   </aside>
 </section>
+<!-- ===== iOS: コントロールシート(「…」) ===== -->
+<section id="tiles" class="scrim sheetwrap" hidden>
+  <div class="ios-sheet">
+    <div class="grab"></div>
+    <div class="tiles-top"><button class="pill" id="tl-edit">編集</button></div>
+    <div class="tile-grid">
+      <button class="tile" data-act="timer"><span class="tc"><span class="ms">timer</span></span><em>タイマー</em></button>
+      <button class="tile" data-act="burst"><span class="tc"><span class="ms">burst_mode</span></span><em>連写</em></button>
+      <button class="tile" data-act="auto"><span class="tc"><span class="ms">motion_photos_auto</span></span><em>自動撮影</em></button>
+      <button class="tile" data-act="aspect"><span class="tc"><span class="ms">aspect_ratio</span></span><em>アスペクト比</em></button>
+      <button class="tile" data-act="exposure"><span class="tc"><span class="ms">exposure</span></span><em>露出・ズーム</em></button>
+      <button class="tile" data-act="histo"><span class="tc"><span class="ms">bar_chart</span></span><em>ヒストグラム</em></button>
+      <button class="tile" data-act="zebra"><span class="tc"><span class="ms">texture</span></span><em>白飛び警告</em></button>
+      <button class="tile" data-act="grid"><span class="tc"><span class="ms">grid_on</span></span><em>グリッド</em></button>
+      <button class="tile" data-act="level"><span class="tc"><span class="ms">straighten</span></span><em>水準器</em></button>
+      <button class="tile" data-act="peak"><span class="tc"><span class="ms">center_focus_strong</span></span><em>ピント確認</em></button>
+      <button class="tile" data-act="dim"><span class="tc"><span class="ms">brightness_6</span></span><em>画面の暗さ</em></button>
+      <button class="tile" data-act="format"><span class="tc"><span class="ms">high_quality</span></span><em>フォーマット</em></button>
+      <button class="tile" data-act="settings"><span class="tc"><span class="ms">settings</span></span><em>設定</em></button>
+    </div>
+    <div class="ex-slot"></div>
+  </div>
+</section>
+<!-- ===== iOS: フォーマットシート(解像度タップ) ===== -->
+<section id="fmt" class="scrim sheetwrap" hidden>
+  <div class="ios-sheet">
+    <div class="grab"></div>
+    <div class="fmt-top"><button class="cbtn" id="fmt-close" aria-label="閉じる"><span class="ms">close</span></button><b id="fmt-title">フォーマット</b><span style="width:40px"></span></div>
+    <div id="fmt-rows"></div>
+  </div>
+</section>
 <div id="menu" class="pmenu" hidden></div>
 
 <!-- ===== スキャン補正エディタ ===== -->
@@ -203,6 +235,29 @@
   </footer>
 </section>
 
+<!-- ===== 写真編集(iOS 準拠) ===== -->
+<section id="pedit" class="sheet black pe" hidden>
+  <header class="pe-top">
+    <button class="lg round" id="pe-cancel" aria-label="キャンセル"><span class="ms">close</span></button>
+    <button class="lg round" id="pe-done" aria-label="完了" style="background:rgba(255,214,10,.9);color:#111"><span class="ms">check</span></button>
+  </header>
+  <div class="pe-bar2">
+    <div class="lg pill" id="pe-left"></div>
+    <b id="pe-title">調整</b>
+    <div class="lg pill" id="pe-right"></div>
+  </div>
+  <div id="pe-stage"><div id="pe-wrap"><canvas id="pe-canvas"></canvas>
+    <div id="pe-crop" hidden><i class="area" data-h="move"></i><i class="hd" data-h="nw"></i><i class="hd" data-h="n"></i><i class="hd" data-h="ne"></i><i class="hd" data-h="e"></i><i class="hd" data-h="se"></i><i class="hd" data-h="s"></i><i class="hd" data-h="sw"></i><i class="hd" data-h="w"></i></div>
+  </div></div>
+  <div id="pe-tool"></div>
+  <nav class="lg" id="pe-tabs">
+    <i class="tri"></i>
+    <button data-t="adjust"><span class="ms">tune</span>調整</button>
+    <button data-t="filter"><span class="ms">filter_vintage</span>フィルタ</button>
+    <button data-t="crop"><span class="ms">crop</span>切り取り</button>
+    <button data-t="tools"><span class="ms">build</span>ツール</button>
+  </nav>
+</section>
 <!-- ===== 設定 ===== -->
 <section id="settings" class="scrim" hidden>
   <div class="panel">
@@ -300,5 +355,7 @@
 <script src="scan.js"></script>
 <script src="capture.js"></script>
 <script src="gallery.js"></script>
+<script src="ios.js"></script>
+<script src="photoedit.js"></script>
 </body>
 </html>

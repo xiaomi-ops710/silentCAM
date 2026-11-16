@@ -107,7 +107,7 @@ const DB = {
   del(ids) {
     return new Promise((res, rej) => {
       const t = this.db.transaction(['meta', 'blobs'], 'readwrite');
-      ids.forEach(id => { t.objectStore('meta').delete(id); t.objectStore('blobs').delete(id); });
+      ids.forEach(id => { t.objectStore('meta').delete(id); t.objectStore('blobs').delete(id); t.objectStore('blobs').delete('o' + id); });
       t.oncomplete = () => res(); t.onerror = () => rej(t.error);
     });
   },
@@ -128,6 +128,7 @@ let stream = null, track = null, hwZoom = false;
 let zmin = 1, zmax = 10, zoom = 1, fx = .5, fy = .5;
 let recording = false, burstRunning = false, countdownTimer = null;
 let startingCamera = null;
+let camBusy = 0;   // カメラ起動・切替の処理中カウンタ(0より大きい間はシャッターを無視)
 
 const isVideoMode = () => cfg.mode === 'video';
 
@@ -152,8 +153,10 @@ async function getStream(isVideo, withAudio) {
 }
 
 function startCamera() {
+  camBusy++;                                             // 起動中はシャッター・モード操作を受け付けない
   // 同時起動を直列化
-  startingCamera = (startingCamera || Promise.resolve()).then(_startCamera, _startCamera);
+  startingCamera = (startingCamera || Promise.resolve()).then(_startCamera, _startCamera)
+    .finally(() => { camBusy = Math.max(0, camBusy - 1); });
   return startingCamera;
 }
 async function _startCamera() {
@@ -232,7 +235,7 @@ function layout() {
   let w, h;
   if (fill) { w = stage.clientWidth; h = stage.clientHeight; }
   else {
-    const cw = stage.clientWidth - 20, ch = stage.clientHeight - 20;
+    const m = IOS ? 0 : 20, cw = stage.clientWidth - m, ch = stage.clientHeight - m;
     w = cw; h = cw / ta;
     if (h > ch) { h = ch; w = ch * ta; }
   }
@@ -351,7 +354,7 @@ let lastTapT = 0;
 function tapFocus(e) {
   panelShow(false);
   const nowT = performance.now();
-  if (cfg.dtap && nowT - lastTapT < 320) { lastTapT = 0; triggerShutter(); return; }
+  if (cfg.dtap && nowT - lastTapT < 320) { lastTapT = 0; triggerShutter('dtap'); return; }
   lastTapT = nowT;
   if (aeLocked) return;
   const r = viewport.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
@@ -530,30 +533,66 @@ async function burstLoop() {
   setTimeout(() => { if (!burstRunning) chip.hidden = true; }, 1200);
 }
 
-function triggerShutter() {
+/* ---------- シャッター発火(すべてここを通す。src は発火源。?debug=1 のとき発火源を画面に表示) ---------- */
+const SHUTTER_DEBUG = /[?&]debug=1/.test(location.search);
+function triggerShutter(src = 'unknown') {
+  if (SHUTTER_DEBUG) { console.log('[shutter]', src); toast('shutter: ' + src, 900); }
+  if (camBusy) return;                                   // モード切替・カメラ再起動の最中は無視
   if (!isVideoMode() && cfg.auto && cfg.auto !== 'off' && window.autoToggle) return autoToggle();
   if (isVideoMode()) return toggleRecord();
   if (cfg.burstMode) return burstRunning ? (burstRunning = false) : burstLoop();
   return shootWithTimer();
 }
-/* ---------- シャッターボタン ---------- */
+// モード切替などで撮影の予約(タイマー・自動撮影・連写)を止める
+function cancelPendingCapture() {
+  cancelCountdown();
+  if (AS.on) autoStop();
+  burstRunning = false;
+}
+/* ---------- シャッターボタン ----------
+   押し始めた指がシャッターの上で離れた時だけ撮影する。
+   ・pointer capture で、指が外へ滑っても離した瞬間の判定を確実に受ける
+   ・大きく動いた/範囲外で離した/長い押し込みは撮らない
+   ・長押し(380ms)で連写。離した時に必ず止める */
 (() => {
-  const sh = $('#shutter'); let holdT = null, held = false, down = false;
+  const sh = $('#shutter');
+  let holdT = null, held = false, press = null;
+  const endPress = () => { clearTimeout(holdT); holdT = null; press = null; };
   sh.addEventListener('pointerdown', e => {
-    e.preventDefault(); down = true; held = false;
+    if (press && performance.now() - press.t < 2000) return;        // 押下中(2本目以降の指)は無視
+    endPress();                                                      // 2秒以上前の取り残し状態は破棄
+    if (e.button !== undefined && e.button > 0) return;
+    e.preventDefault();
+    press = { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now(), moved: false };
+    held = false;
+    try { sh.setPointerCapture(e.pointerId); } catch (_) {}
     if (isVideoMode() || cfg.burstMode || (cfg.auto && cfg.auto !== 'off')) return;
-    holdT = setTimeout(() => { held = true; burstLoop(); }, 380);   // 長押し=連写
+    holdT = setTimeout(() => { if (press && !camBusy) { held = true; burstLoop(); } }, 380);
   });
-  const up = () => {
-    if (!down) return; down = false; clearTimeout(holdT);
-    if (held) { burstRunning = false; return; }
-    triggerShutter();
+  sh.addEventListener('pointermove', e => {
+    if (!press || e.pointerId !== press.id || press.moved) return;
+    if (Math.hypot(e.clientX - press.x, e.clientY - press.y) > 12) { press.moved = true; clearTimeout(holdT); }
+  });
+  sh.addEventListener('pointerup', e => {
+    if (!press || e.pointerId !== press.id) return;
+    const p = press, r = sh.getBoundingClientRect();
+    const inside = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+    const wasHeld = held;
+    endPress(); held = false;
+    if (wasHeld) { burstRunning = false; return; }
+    if (!p.moved && inside && performance.now() - p.t < 1200) triggerShutter('shutter');
+  });
+  const cancel = e => {
+    if (!press || (e && e.pointerId !== press.id)) return;
+    const wasHeld = held; endPress(); held = false;
+    if (wasHeld) burstRunning = false;
   };
-  sh.addEventListener('pointerup', up);
-  sh.addEventListener('pointercancel', () => { down = false; clearTimeout(holdT); if (held) burstRunning = false; });
+  sh.addEventListener('pointercancel', cancel);
+  sh.addEventListener('lostpointercapture', cancel);
   sh.addEventListener('contextmenu', e => e.preventDefault());
 })();
 $('#btn-snap').onclick = shootOnce;
+
 
 /* ---------- ビデオ録画 ---------- */
 let rec = null, recChunks = [], recStart = 0, recTimer = null, recThumb = null, recPausedAt = 0, recPausedTotal = 0;
@@ -634,15 +673,20 @@ window.addEventListener('resize', () => setTimeout(moveInd, 50));
 window.addEventListener('orientationchange', () => setTimeout(moveInd, 350));
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(moveInd);
 $$('#modes .mode').forEach(b => b.onclick = async () => {
-  if (recording || burstRunning) return;
-  const prevVideo = isVideoMode(); cfg.mode = b.dataset.mode; saveCfg(); syncUI(); layout();
+  const want = b.dataset.mode;
+  if (want === cfg.mode) return;
+  if (recording || burstRunning) { toast('撮影中はモードを変更できません', 1600); return; }
+  if (camBusy) return;                                   // 前の切替が終わるまで待つ
+  const prevVideo = isVideoMode();
+  cancelPendingCapture();                                // タイマー・自動撮影・連写を止めてから切り替える
+  cfg.mode = want; saveCfg(); syncUI(); layout();
   if (!reduceMotion()) playModeAnim();
   if (prevVideo !== isVideoMode()) await startCamera();
 });
 $('#btn-burst').onclick = () => { cfg.burstMode = !cfg.burstMode; saveCfg(); syncUI(); toast(cfg.burstMode ? '連写モード: シャッターで開始/停止' : '連写モードOFF(シャッター長押しで連写)'); };
 $('#btn-timer').onclick = () => { cfg.timer = { 0: 3, 3: 10, 10: 0 }[cfg.timer] || 0; saveCfg(); syncUI(); };
 let flipRot = 0;
-$('#btn-flip').onclick = async () => { if (recording) return; flipRot += 180; $('#btn-flip .ms').style.transform = `rotate(${flipRot}deg)`; cfg.facing = cfg.facing === 'user' ? 'environment' : 'user'; zoom = 1; fx = fy = .5; saveCfg(); animateFlip(); await startCamera(); };
+$('#btn-flip').onclick = async () => { if (recording) return; cancelPendingCapture(); flipRot += 180; $('#btn-flip .ms').style.transform = `rotate(${flipRot}deg)`; cfg.facing = cfg.facing === 'user' ? 'environment' : 'user'; zoom = 1; fx = fy = .5; saveCfg(); animateFlip(); await startCamera(); };
 $('#btn-grid').onclick = () => { cfg.grid = !cfg.grid; saveCfg(); syncUI(); };
 $('#btn-level').onclick = () => toggleLevel(!cfg.level);
 $('#btn-peak').onclick = () => { cfg.peak = !cfg.peak; saveCfg(); syncUI(); syncSettings(); };
@@ -767,20 +811,27 @@ $('#s-wipe').onclick = async () => {
 
 /* ---------- 外部キーボード / Bluetoothリモコン ---------- */
 document.addEventListener('keydown', e => {
-  const t = document.activeElement; if (t && (t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && t.type === 'text'))) return;
-  if ([gallery, viewer, settings, $('#dlg')].some(x => x.classList.contains('open')) || e.repeat || e.metaKey || e.ctrlKey) return;
-  if ([' ', 'Enter', 'ArrowRight', 'PageDown', 'MediaTrackNext', 'AudioVolumeUp'].includes(e.key)) { e.preventDefault(); triggerShutter(); }
+  const t = e.target;
+  // 入力欄や(シャッター以外の)ボタンにフォーカスがある時は、その要素の本来の動作を優先する
+  if (t && t.id !== 'shutter' && (/^(INPUT|TEXTAREA|SELECT|BUTTON)$/.test(t.tagName) || t.isContentEditable)) return;
+  if ([gallery, viewer, settings, editor, $('#dlg'), $('#pedit'), $('#tiles'), $('#fmt')].some(x => x && x.classList.contains('open')) || e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
+  if ([' ', 'Enter', 'ArrowRight', 'PageDown', 'MediaTrackNext', 'AudioVolumeUp'].includes(e.key)) { e.preventDefault(); triggerShutter('key:' + e.key); }
   else if (['+', '=', 'ArrowUp'].includes(e.key)) { e.preventDefault(); setZoom(zoom + .5); }
   else if (['-', '_', 'ArrowDown'].includes(e.key)) { e.preventDefault(); setZoom(zoom - .5); }
   else if (e.key === 'g' || e.key === 'G') $('#btn-grid').click();
 });
+// ボタンを押した後はフォーカスを外す(残ったフォーカスでEnter/Spaceがそのボタンを押してしまうのを防ぐ)
+document.addEventListener('click', e => {
+  const b = e.target.closest && e.target.closest('button');
+  if (b && b.id !== 'shutter') setTimeout(() => b.blur(), 0);
+}, true);
 
 /* =====================================================================
    更新の検出と適用
    ・起動のたびに sw.js を確認(HTTPキャッシュを使わない)
    ・新しい版が見つかったら、撮影中でない時に自動で読み直す(撮影を邪魔しない)
    ===================================================================== */
-const APP_VERSION = 'v15';
+const APP_VERSION = 'v17';
 let pendingReload = false;
 function busyNow() { return recording || burstRunning || AS.on || !!countdownTimer || (editor && editor.classList.contains('open')); }
 function applyPendingReload() {
