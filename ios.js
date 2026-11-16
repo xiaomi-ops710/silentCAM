@@ -11,6 +11,9 @@ const IOS_UI = document.documentElement.classList.contains('ios');
 const IPAD_UI = document.documentElement.classList.contains('ipad');
 const mk = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
 const svgI = name => svgIcon(name);
+const IPAD10 = document.documentElement.classList.contains('dev-ipad10');
+// 端末ごとのフレームレートの選択肢(iPad 第10世代は 4K のとき 60fps が無い)
+const fpsChoices = res => (IPAD10 && String(res) === '2160') ? [24, 30] : [24, 30, 60];
 
 /* ---- 解像度表示(上部・右の列で共通に使う2行の表示) ---- */
 const baseResChip = updateResChip;
@@ -99,7 +102,7 @@ const ACT = {
   settings: () => { closeSheet('tiles2'); $('#btn-settings').click(); }
 };
 
-/* ---- 「…」のツールシート/* ---- 「…」のツールシート(参照画像の9項目) ---- */
+/* ---- 「…」のツールシート(参照画像の9項目) ---- */
 const MAIN_TILES = [
   ['flash', 'フラッシュ', 'flashOff'], ['histo', 'ヒストグラム', 'histo'], ['aspect', 'アスペクト比', 'aspect169'],
   ['timer', 'タイマー', 'timerOff'], ['exposure', '露出', 'exposure'], ['style', 'スタイル', 'style'],
@@ -110,9 +113,21 @@ const SECOND_TILES = [
   ['grid', 'グリッド', 'aspect169'], ['level', '水準器', 'level'], ['peak', 'ピント確認', 'depth'],
   ['dim', '画面の暗さ', 'nightOff'], ['settings', '設定', 'more']
 ];
+const VIDEO_TILES = [
+  ['flash', 'フラッシュ', 'flashAuto'], ['exposure', '露出', 'exposure'], ['action', 'アクション', 'action'], ['format', 'フォーマット', null]
+];
+function renderMainTiles() {
+  const grid = $('#tiles .tile-grid'); if (!grid) return;
+  const list = isVideoMode() ? VIDEO_TILES : MAIN_TILES;
+  grid.classList.toggle('video', isVideoMode());
+  const key = list.map(t => t[0]).join(',');
+  if (grid.dataset.key === key) return;
+  grid.dataset.key = key;
+  grid.innerHTML = list.map(([act, label]) => `<button class="tile" data-act="${act}"><span class="tc"></span><em>${label}</em></button>`).join('');
+}
 function buildTiles() {
   const grid = $('#tiles .tile-grid');
-  grid.innerHTML = MAIN_TILES.map(([act, label]) => `<button class="tile" data-act="${act}"><span class="tc"></span><em>${label}</em></button>`).join('');
+  renderMainTiles();
   grid.addEventListener('click', e => { const b = e.target.closest('.tile'); if (b && ACT[b.dataset.act]) ACT[b.dataset.act](); });
   // 長押し「…」: 従来の機能を並べたシート
   const s2 = mk('section', 'scrim sheetwrap'); s2.id = 'tiles2'; s2.hidden = true;
@@ -137,12 +152,12 @@ function wireCapLong() {
 function syncTiles() {
   if (!$('#tiles .tile-grid').children.length) return;
   const st = {
-    flash: torchOn, aspect: cfg.aspect !== 'full', timer: cfg.timer > 0,
+    flash: torchOn, aspect: cfg.aspect !== 'full', timer: cfg.timer > 0, action: !!cfg.burstMode,
     exposure: $('#tiles .ex-slot').classList.contains('open'), style: (cfg.style || 'standard') !== 'standard'
   };
   const ICON = { flash: torchOn ? 'flashOn' : 'flashOff', timer: cfg.timer > 0 ? 'timer' : 'timerOff', aspect: 'aspect169' };
   $$('#tiles .tile').forEach(b => {
-    const act = b.dataset.act, def = MAIN_TILES.find(t => t[0] === act);
+    const act = b.dataset.act, def = MAIN_TILES.find(t => t[0] === act) || VIDEO_TILES.find(t => t[0] === act);
     const tc = b.querySelector('.tc');
     if (act === 'format') tc.innerHTML = `<span class="fmtTxt">${resHtml()}</span>`;
     else tc.innerHTML = svgI(ICON[act] || (def && def[2]) || 'more');
@@ -152,10 +167,41 @@ function syncTiles() {
     if (act === 'aspect') b.querySelector('em').textContent = cfg.aspect === 'full' ? 'アスペクト比' : `比率 ${cfg.aspect}`;
   });
 }
-function openSheet(id) { if (id === 'tiles') syncTiles(); show($('#' + id)); }
+function openSheet(id) { if (id === 'tiles') { renderMainTiles(); syncTiles(); } show($('#' + id)); }
 function closeSheet(id) { hide($('#' + id)); }
 
+/* ---- フォーマットのシート(解像度・フレームレート / 写真の解像度・形式) ---- */
+function openFmt() {
+  const v = isVideoMode();
+  const rows = v
+    ? [{ t: '解像度', k: 'videoRes', o: [['720', 'HD'], ['1080', 'FHD'], ['2160', '4K']] },
+       { t: 'フレームレート', k: 'fps', o: fpsChoices(cfg.videoRes).map(f => [String(f), String(f)]) }]
+    : [{ t: '解像度', k: 'photoRes', o: [['fhd', 'FHD'], ['4k', '4K'], ['max', '最大']] },
+       { t: '形式', k: 'fmt', o: [['jpeg', 'JPEG'], ['png', 'PNG']] }];
+  $('#fmt-title').textContent = 'フォーマット';
+  const box = $('#fmt-rows'); box.innerHTML = '';
+  rows.forEach(r => {
+    const row = mk('div', 'frow');
+    row.innerHTML = `<div class="lab">${r.t}</div><div class="opts"></div>`;
+    const opts = row.querySelector('.opts');
+    r.o.forEach(([val, label]) => {
+      const b = mk('button', String(cfg[r.k]) === val ? 'sel' : '', label);
+      b.onclick = () => {
+        applyKey(r.k, r.k === 'fps' ? Number(val) : val);
+        if (r.k === 'videoRes' && IPAD10 && val === '2160' && Number(cfg.fps) > 30) applyKey('fps', 30);
+        openFmt();
+      };
+      opts.appendChild(b);
+    });
+    box.appendChild(row);
+  });
+  show($('#fmt'));
+}
+
 /* ---- 上部のアイコン行(iPhone) ---- */
+function timerIconSvg(n) {
+  return `<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M9.8 2.8h4.4M12 2.8v2.2"/><circle cx="12" cy="13.2" r="8"/><text x="12" y="16.6" font-size="10.5" font-weight="600" text-anchor="middle" fill="currentColor" stroke="none" font-family="-apple-system,Helvetica,Arial">${n}</text></svg>`;
+}
 const TOP_ITEMS = ['flash', 'aspect', 'action', 'timer', 'ev', 'fmt'];
 function buildTop() {
   const t = mk('div', 'topicons'); t.id = 'topicons'; t.classList.add('iphone-only');
@@ -174,7 +220,7 @@ function syncTop() {
     flash: [torchOn ? 'flashOn' : 'flashOff', torchOn],
     aspect: ['aspect169', cfg.aspect !== 'full'],
     action: [cfg.burstMode ? 'action' : 'actionOff', !!cfg.burstMode],
-    timer: [cfg.timer > 0 ? 'timer' : 'timerOff', cfg.timer > 0]
+    timer: [cfg.timer > 0 ? 'timerN' + cfg.timer : 'timerOff', cfg.timer > 0]
   };
   $$('#topicons .tb').forEach(b => {
     const k = b.dataset.k;
@@ -188,7 +234,7 @@ function syncTop() {
       b.innerHTML = `<span class="fmtTxt">${resHtml()}</span>`;
     } else {
       const [icon, on] = map[k];
-      if (b.dataset.icon !== icon) { b.innerHTML = `<span class="ico-wrap">${svgI(icon)}</span>`; b.dataset.icon = icon; }
+      if (b.dataset.icon !== icon) { b.innerHTML = `<span class="ico-wrap">${icon.startsWith('timerN') ? timerIconSvg(icon.slice(6)) : svgI(icon)}</span>`; b.dataset.icon = icon; }
       b.classList.toggle('on', on);
     }
   });
@@ -222,7 +268,7 @@ function buildSideButtons() {
 let pickerEl = null;
 function openPicker(kind, anchor) {
   closePicker();
-  const opts = kind === 'res' ? [['720', 'HD'], ['1080', 'FHD'], ['2160', '4K']] : [['24', '24'], ['30', '30'], ['60', '60']];
+  const opts = kind === 'res' ? [['720', 'HD'], ['1080', 'FHD'], ['2160', '4K']] : fpsChoices(cfg.videoRes).map(f => [String(f), String(f)]);
   const cur = kind === 'res' ? String(cfg.videoRes) : String(cfg.fps);
   const p = mk('div', 'ipicker'); p.id = 'ipicker'; p.classList.add('lgg');
   p.innerHTML = opts.map(([v, l]) => `<button data-v="${v}" class="${v === cur ? 'sel' : ''}">${l}</button>`).join('');
@@ -242,72 +288,93 @@ function openPicker(kind, anchor) {
 function closePicker() { if (pickerEl) { pickerEl.remove(); pickerEl = null; } }
 document.addEventListener('pointerdown', e => { if (pickerEl && !e.target.closest('#ipicker') && !e.target.closest('.ipad-top')) closePicker(); }, true);
 
-/* ---- ズームのダイヤル(iPhone: 長押し) ---- */
-const DIAL = { cx: 196.5, cy: 330, R: 322, W: 393, H: 340 };
-const dialAngle = z => Math.max(-60, Math.min(60, 11.5 * Math.log2(z)));
+/* ---- ズームのダイヤル(iPhone): 長押しで出て、押したまま左右に回し、離すと閉じる ----
+   本家の配置: 円の半径 226pt、中心は画面下の方、頂点が画面の約60%の高さ。目盛りは 2^(角度/16.5) の対数。 */
+const DIAL = { cx: 196.5, cy: 226, R: 226, W: 393, H: 340, K: 16.5 };
+let dialAng = 0, dialOpen = false, dialPress = null, lpFired = false, lpT = 0;
+const dialAngle = z => Math.max(-62, Math.min(62, DIAL.K * Math.log2(z)));
 function shownZoom() { return (lensId && lensId === ultraId && zoom === 1) ? 0.5 : zoom; }
+function fmtZoom(z) { return (Math.abs(z - Math.round(z)) < 0.05 ? Math.round(z) : z.toFixed(1)) + '×'; }
 function buildDial() {
   if (!IOS_UI || IPAD_UI) return;
   const d = mk('div', ''); d.id = 'zdial'; d.hidden = true;
-  const ticks = [0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.1, 1.2, 1.4, 1.6, 1.8, 2, 2.5, 3, 4, 5, 6, 8, 10];
+  const ticks = [0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.1, 1.2, 1.4, 1.6, 1.8, 2, 2.5, 3, 4, 5, 6, 7, 8, 9, 10, 12];
   const majors = [0.5, 1, 2, 3, 5, 10];
   let g = '';
   ticks.forEach(z => {
-    const a = dialAngle(z) * Math.PI / 180, major = majors.includes(z);
-    const sx = DIAL.cx + DIAL.R * Math.sin(a), sy = DIAL.cy - DIAL.R * Math.cos(a);
-    const r2 = DIAL.R - (major ? 20 : 10);
-    const ex = DIAL.cx + r2 * Math.sin(a), ey = DIAL.cy - r2 * Math.cos(a);
-    g += `<line x1="${sx.toFixed(1)}" y1="${sy.toFixed(1)}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" class="${major ? 'maj' : 'min'}"/>`;
+    const a = dialAngle(z) * Math.PI / 180, sin = Math.sin(a), cos = Math.cos(a), major = majors.includes(z);
+    const r1 = DIAL.R - 4, r2 = DIAL.R - (major ? 30 : 17);
+    g += `<line x1="${(DIAL.cx + r1 * sin).toFixed(2)}" y1="${(DIAL.cy - r1 * cos).toFixed(2)}" x2="${(DIAL.cx + r2 * sin).toFixed(2)}" y2="${(DIAL.cy - r2 * cos).toFixed(2)}" class="${major ? 'maj' : 'min'}"/>`;
     if (major) {
-      const lr = DIAL.R - 46, lx = DIAL.cx + lr * Math.sin(a), ly = DIAL.cy - lr * Math.cos(a);
-      const lab = z === 1 ? '1×' : (z === 0.5 ? '.5' : String(z));
-      g += `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" class="dlab${z === 1 ? ' cur' : ''}">${lab}</text>`;
-      if (z === 0.5) g += `<text x="${lx.toFixed(1)}" y="${(ly + 16).toFixed(1)}" class="dmm">13MM</text>`;
+      const lr = DIAL.R - 52, lx = DIAL.cx + lr * sin, ly = DIAL.cy - lr * cos;
+      const rot = `rotate(${dialAngle(z).toFixed(2)} ${lx.toFixed(2)} ${ly.toFixed(2)})`;
+      g += `<text x="${lx.toFixed(2)}" y="${ly.toFixed(2)}" transform="${rot}" class="dlab${z === 1 ? ' one' : ''}">${z === 0.5 ? '.5' : z}</text>`;
+      if (z === 0.5) g += `<text x="${(lx - 4).toFixed(2)}" y="${(ly + 15).toFixed(2)}" transform="${rot}" class="dmm">13MM</text>`;
     }
   });
   d.innerHTML = `<svg viewBox="0 0 ${DIAL.W} ${DIAL.H}" width="100%" height="100%" preserveAspectRatio="xMidYMax meet">
     <circle cx="${DIAL.cx}" cy="${DIAL.cy}" r="${DIAL.R}" class="dbg"/>
+    <rect x="0" y="${DIAL.cy}" width="${DIAL.W}" height="${DIAL.H - DIAL.cy}" class="dbg"/>
     <g id="zdial-g">${g}</g>
-    <path d="M${DIAL.cx} 12 l-5 10 h10 z" class="dmark"/>
-    <text id="zdial-big" x="${DIAL.cx}" y="66" class="dbig">1×</text>
-    <text id="zdial-mm" x="${DIAL.cx}" y="86" class="dmm2">26MM</text>
+    <path d="M${DIAL.cx} 2.5 l-6.2 11.5 h12.4 z" class="dmark"/>
+    <text id="zd-big" x="${DIAL.cx}" y="40" class="dbig">1×</text>
+    <text id="zd-mm" x="${DIAL.cx}" y="57" class="dmm2">26MM</text>
   </svg>`;
   $('#app').appendChild(d);
-  const svg = d.querySelector('svg');
-  let dragging = false;
-  const move = e => {
-    const r = svg.getBoundingClientRect(), sc = DIAL.W / r.width;
-    const x = (e.clientX - r.left) * sc, y = (e.clientY - r.top) * sc;
-    const ang = Math.atan2(x - DIAL.cx, DIAL.cy - y) * 180 / Math.PI;
-    const z = Math.max(0.5, Math.min(zmax || 10, Math.pow(2, ang / 11.5)));
-    dialZ = z;
-    if (z >= 1 && !(lensId && lensId === ultraId)) setZoom(z);
-    syncDial(z);
-  };
-  svg.addEventListener('pointerdown', e => { dragging = true; svg.setPointerCapture(e.pointerId); move(e); });
-  svg.addEventListener('pointermove', e => { if (dragging) move(e); });
-  const end = () => { if (!dragging) return; dragging = false; if (dialZ < 1) choosePreset(0.5); else setZoom(dialZ); keepZoomPanel(); };
-  svg.addEventListener('pointerup', end); svg.addEventListener('pointercancel', end);
-  document.addEventListener('pointerdown', e => { if (!d.hidden && !e.target.closest('#zdial') && !e.target.closest('#zoompresets')) d.hidden = true; }, true);
 }
-let dialZ = 1;
 function syncDial(z) {
   const g = $('#zdial-g'); if (!g) return;
-  const v = z != null ? z : shownZoom(); dialZ = v;
-  g.style.transform = `rotate(${(-dialAngle(v)).toFixed(2)}deg)`;
-  const big = $('#zdial-big'), mm = $('#zdial-mm');
-  if (big) big.textContent = (v % 1 === 0 ? v.toFixed(0) : v.toFixed(1)) + '×';
-  if (mm) mm.textContent = v === 1 ? '26MM' : (v < 1 ? '13MM' : '');
+  const v = z != null ? z : shownZoom();
+  dialAng = dialAngle(v);
+  g.style.transformOrigin = `${DIAL.cx}px ${DIAL.cy}px`;
+  g.style.transform = `rotate(${(-dialAng).toFixed(2)}deg)`;
+  const big = $('#zd-big'), mm = $('#zd-mm');
+  if (big) big.textContent = fmtZoom(v);
+  if (mm) mm.textContent = v < 0.9 ? '13MM' : (Math.abs(v - 1) < 0.05 ? '26MM' : '');
 }
-let lpT = 0, lpFired = false;
+function showDial() {
+  const d = $('#zdial'); if (!d || dialOpen) return;
+  dialOpen = true; d.hidden = false;
+  $('#zoompanel').classList.add('dial-on');
+  syncDial(shownZoom());
+}
+function hideDial() {
+  if (!dialOpen) return;
+  dialOpen = false; dialPress = null;
+  const d = $('#zdial'); if (d) d.hidden = true;
+  $('#zoompanel').classList.remove('dial-on');
+}
+// 押したまま左右に動かすと回る。左へ動かすと大きく(望遠側)、右へ動かすと小さく(広角側)
 function wireZoomPress() {
   const zp = $('#zoompresets');
   zp.addEventListener('pointerdown', e => {
+    const b = e.target.closest('button'); if (!b || !IOS_UI || IPAD_UI) return;
     lpFired = false;
-    if (!e.target.closest('button') || !IOS_UI || IPAD_UI) return;
-    lpT = setTimeout(() => { lpFired = true; const d = $('#zdial'); if (d) { d.hidden = false; syncDial(); } }, 420);
+    try { b.setPointerCapture(e.pointerId); } catch (_) {}
+    dialPress = { x: e.clientX, id: e.pointerId };
+    clearTimeout(lpT);
+    lpT = setTimeout(() => { lpFired = true; showDial(); }, 380);
   });
-  ['pointerup', 'pointercancel', 'pointerleave'].forEach(t => zp.addEventListener(t, () => clearTimeout(lpT)));
+  document.addEventListener('pointermove', e => {
+    if (!dialOpen || !dialPress) return;
+    const dx = e.clientX - dialPress.x; dialPress.x = e.clientX;
+    const ang = dialAng - dx * (180 / Math.PI) / DIAL.R;   // 左へ動かすと角度が増える
+    const z = Math.max(0.5, Math.min(zmax, Math.pow(2, ang / DIAL.K)));
+    if (z >= 1) setZoom(z);
+    syncDial(z);
+  });
+  const end = () => {
+    clearTimeout(lpT);
+    if (dialOpen) {
+      const z = shownZoom();
+      hideDial();
+      if (z < 1) choosePreset(0.5); else setZoom(z);
+      keepZoomPanel();
+    }
+    dialPress = null;
+  };
+  document.addEventListener('pointerup', end);
+  document.addEventListener('pointercancel', end);
   zp.addEventListener('click', e => { if (lpFired) { lpFired = false; e.stopPropagation(); e.preventDefault(); } }, true);
 }
 
@@ -354,6 +421,11 @@ function setupGlass() {
   buildSideButtons();
   buildDial();
   wireZoomPress();
+  // 設定ボタン: 本家にはないが、機能への入口として左上(iPad は右上)に置く
+  const sb = $('#btn-settings');
+  if (sb) { ctl.appendChild(sb); sb.classList.add('lgg', 'settings-btn'); sb.innerHTML = `<span class="ms">${svgI('gear')}</span>`; }
+  // プレビューの大きさは、画面の大きさが変わるたびに計算し直す(動画が小さくなる不具合の対策)
+  if (window.ResizeObserver) new ResizeObserver(() => { try { layout(); } catch (_) {} }).observe($('#stage'));
   ['tiles', 'fmt'].forEach(id => $('#' + id).addEventListener('click', e => { if (e.target.id === id) closeSheet(id); }));
   $('#zoompresets').addEventListener('click', e => {
     const b = e.target.closest && e.target.closest('button');

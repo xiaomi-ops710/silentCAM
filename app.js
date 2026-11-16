@@ -35,6 +35,7 @@ const DEF = {
 let cfg = { ...DEF };
 try { Object.assign(cfg, JSON.parse(localStorage.getItem('silentcam-cfg') || '{}')); } catch (_) {}
 cfg.zebra = false; cfg.histo = false;   // 白飛び警告・ヒストグラムは起動のたびにオフ
+if (document.documentElement.classList.contains('dev-ipad10') && cfg.videoRes === '2160' && Number(cfg.fps) > 30) cfg.fps = 30;   // iPad 第10世代は 4K60 に非対応
 const saveCfg = () => { try { localStorage.setItem('silentcam-cfg', JSON.stringify(cfg)); } catch (_) {} };
 
 /* ---------- トースト / ダイアログ ---------- */
@@ -838,7 +839,7 @@ document.addEventListener('click', e => {
    ・起動のたびに sw.js を確認(HTTPキャッシュを使わない)
    ・新しい版が見つかったら、撮影中でない時に自動で読み直す(撮影を邪魔しない)
    ===================================================================== */
-const APP_VERSION = 'v21';
+const APP_VERSION = 'v23';
 let pendingReload = false;
 function busyNow() { return recording || burstRunning || AS.on || !!countdownTimer || (editor && editor.classList.contains('open')); }
 function applyPendingReload() {

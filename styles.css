@@ -899,3 +899,49 @@ html.ios .ib.lgg:active,html.ios .ipad-top.lgg:active{transform:scale(.9)}
 .ico-lg{position:relative;z-index:1}
 .ms[data-sf]::before{content:none!important}
 .lg .ms[data-sf]{display:grid;place-items:center}
+
+/* =====================================================================
+   v21b: ズームのダイヤル(本家の配置) / 動画・写真のメニュー / 設定ボタン / 上部のタイマー
+   ===================================================================== */
+#zdial{pointer-events:none}
+#zdial svg{display:block;overflow:visible}
+#zdial-g{transform-origin:196.5px 226px;transition:transform .08s linear}
+#zdial .dbg{fill:rgba(20,20,22,.78)}
+#zdial line{stroke-linecap:round}
+#zdial line.maj{stroke:#fff;stroke-width:3}
+#zdial line.min{stroke:rgba(255,255,255,.5);stroke-width:1.4}
+#zdial .dlab{fill:#fff;font-size:19px;font-weight:600;text-anchor:middle;dominant-baseline:middle}
+#zdial .dlab.one{fill:#FFD60A}
+#zdial .dmm{fill:rgba(255,255,255,.45);font-size:12px;text-anchor:middle;dominant-baseline:middle}
+#zdial .dmark{fill:#FFD60A}
+#zdial .dbig{fill:#FFD60A;font-size:17px;font-weight:600;text-anchor:middle}
+#zdial .dmm2{fill:#FFD60A;font-size:12px;font-weight:500;text-anchor:middle}
+#zdial:not([hidden]){animation:dialIn .26s cubic-bezier(.2,.9,.3,1)}
+#zoompanel{transition:opacity .2s}
+#zoompanel.dial-on #zoompresets{opacity:0;pointer-events:none}
+#zoompresets{transition:opacity .2s}
+
+/* 写真/動画のメニュー: 動画は4項目(中央の下に「フォーマット」)、写真は9項目 */
+#tiles .tile-grid.video{grid-template-columns:repeat(3,1fr)}
+#tiles .tile-grid.video .tile:last-child{grid-column:2}
+
+/* 設定ボタン(左上。iPad は右上) */
+html.ios:not(.ipad) #btn-settings{position:absolute;top:calc(var(--sat) + 8px);left:16px;width:40px;height:40px;border-radius:50%;padding:0;border:0;display:grid;place-items:center;z-index:5;color:#fff;background:rgba(40,40,44,.42);-webkit-backdrop-filter:blur(22px) saturate(180%);backdrop-filter:blur(22px) saturate(180%);box-shadow:inset 0 1px 0 rgba(255,255,255,.2)}
+html.ios.ipad #btn-settings{position:absolute;top:calc(var(--top) + 8px);right:16px;left:auto;width:44px;height:44px;border-radius:50%;padding:0;border:0;display:grid;place-items:center;z-index:5;color:#fff;background:rgba(40,40,44,.42);-webkit-backdrop-filter:blur(22px) saturate(180%);backdrop-filter:blur(22px) saturate(180%)}
+#btn-settings .ico{width:22px;height:22px}
+
+/* 上部のタイマー(秒数入り) */
+html.ios:not(.ipad) .topicons .tb .ico-wrap svg{width:24px;height:24px}
+html.ios:not(.ipad) .topicons .tb.on .ico-wrap svg{color:#FFD60A}
+
+/* =====================================================================
+   v23: 端末ごとの最適化
+   ・iPad 第10世代(2360×1640 / 820×1180 pt): 超広角なし → 0.5× を出さない。ガラスの blur を軽くして負荷を下げる
+   ・iPhone 15 / 16(393×852 pt): 上部の行を Dynamic Island の下に合わせる
+   ===================================================================== */
+html.ipad #zoompresets button[data-z="0.5"]{display:none!important}
+html.dev-ipad10 .lgg{-webkit-backdrop-filter:blur(14px) saturate(165%) brightness(1.04);backdrop-filter:blur(14px) saturate(165%) brightness(1.04)}
+html.dev-ipad10 .lgg::after{opacity:.7}
+html.dev-ipad10 html.lg-refract .lgg{-webkit-backdrop-filter:blur(14px) saturate(165%);backdrop-filter:blur(14px) saturate(165%)}
+html.dev-iphone-61.ios:not(.ipad) .topicons{top:calc(var(--sat) - 2px)}
+html.dev-iphone-61.ios:not(.ipad) #btn-settings{top:calc(var(--sat) - 2px)}

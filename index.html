@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<script>(function(){var ua=navigator.userAgent,ip=/iPad/.test(ua)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1),ph=/iPhone|iPod/.test(ua),c=document.documentElement.classList;if(ip||ph)c.add("ios");if(ip)c.add("ipad");})();</script>
+<script>(function(){var ua=navigator.userAgent,ip=/iPad/.test(ua)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1),ph=/iPhone|iPod/.test(ua),c=document.documentElement.classList;if(ip||ph)c.add("ios");if(ip)c.add("ipad");var mn=Math.min(screen.width,screen.height),mx=Math.max(screen.width,screen.height);if(ip&&mn===820)c.add("dev-ipad10");if(ph&&mn===393&&mx===852)c.add("dev-iphone-61");})();</script>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
 <meta name="apple-mobile-web-app-capable" content="yes">
