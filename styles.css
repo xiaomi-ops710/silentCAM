@@ -691,3 +691,149 @@ html.ios #modes .ind{background:rgba(255,255,255,.16);box-shadow:inset 0 1px 0 r
 #pe-tabs button .ms{font-size:24px}
 #pe-tabs button.on{color:#fff}
 #pe-tabs .tri{position:absolute;top:-9px;width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:6px solid #FFD60A;transition:left .3s var(--ease)}
+
+/* =====================================================================
+   iPad(iPadOS 27)
+   ・上端は半透明のメニューバーで操作できないため、その下(--top)に配置する
+   ・カメラ: 右側の操作列(タイマー・フリップ・シャッター・サムネ・モード縦並び)
+   ・写真編集: 左の縦タブ、右の調整列(ラベル・円・縦のルーラー)、上部のカプセルと赤い元に戻す
+   ===================================================================== */
+html.ipad{--top:64px}
+html.ipad body{background:#000}
+html.ipad .sheet{padding-top:var(--top)}
+html.ipad #settings .appbar{padding-top:calc(var(--top) + 10px)}
+
+/* ---- カメラ(iPad) ---- */
+html.ios.ipad #app{display:block;top:0;bottom:0;padding:0}
+html.ios.ipad #stage{position:absolute;top:var(--top);left:0;right:112px;bottom:0;padding:0}
+html.ios.ipad #controls{position:absolute;top:var(--top);left:0;right:0;bottom:0;display:block;pointer-events:none}
+html.ios.ipad #controls>*{pointer-events:auto}
+html.ios.ipad #chip-res{top:3%;left:auto;right:20px;width:72px;height:44px;transform:none}
+html.ios.ipad #chip-lock{top:3%;left:16px}
+html.ios.ipad #btn-timer{top:12%;left:auto;right:36px;bottom:auto;width:48px;height:48px;transform:none}
+html.ios.ipad #btn-cap{top:22%;left:auto;right:36px;bottom:auto;width:48px;height:48px}
+html.ios.ipad #btn-burst{display:none!important}
+html.ios.ipad #btn-flip{top:34%;left:auto;right:36px;bottom:auto;width:48px;height:48px;transform:none}
+html.ios.ipad #shutter-wrap{top:50%;left:auto;right:16px;bottom:auto;transform:translateY(-50%);width:88px;height:88px}
+html.ios.ipad #btn-gallery{top:68%;left:auto;right:33px;bottom:auto;width:54px;height:54px;border-radius:10px}
+html.ios.ipad #modes{top:80%;left:calc(100% - 102px);right:auto;bottom:auto;width:84px;height:auto;transform:none;flex-direction:column!important;justify-content:center;padding:6px;border-radius:30px}
+html.ios.ipad #modes .mode{width:100%;flex:none;padding:9px 0;text-align:center}
+html.ios.ipad #zoompanel,html.ios.ipad #zoompanel.show{top:44%;bottom:auto;left:18px;right:auto;width:auto;flex-direction:column;align-items:center;justify-content:flex-start}
+html.ios.ipad #zoompresets{flex-direction:column;gap:6px}
+html.ios.ipad #zoompresets button:not(.sel){display:none}
+html.ios.ipad #zoompresets button:nth-child(n+4){display:none}
+html.ios.ipad #zoompanel.open #zoompresets button{display:inline-flex}
+html.ios.ipad #zoompresets button.sel{width:44px;height:44px}
+
+/* ---- 写真編集(iPad) ---- */
+html.ipad #pedit.open{display:block}
+html.ipad #pedit{padding:0;background:#000}
+html.ipad #pedit.crop{background:#1c1c1e}
+html.ipad .pe-top{position:absolute;top:var(--top);left:24px;padding:0;margin:0;z-index:3}
+html.ipad #pe-done{display:none}
+html.ipad .pe-bar2{position:absolute;top:var(--top);left:0;right:0;height:44px;padding:0 80px;margin:0;align-items:center;justify-content:space-between;z-index:3;pointer-events:none}
+html.ipad .pe-bar2 .lg,html.ipad .pe-bar2 button{pointer-events:auto}
+html.ipad #pe-title{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:20px;font-weight:500;color:#8e8e93;pointer-events:none;white-space:nowrap}
+html.ipad .lg.pill{height:44px}
+html.ipad .lg.round{background:rgba(44,44,48,.6)}
+html.ipad .pe-red{display:grid;position:absolute;right:24px;top:var(--top);width:44px;height:44px;border-radius:50%;background:#ff3b30;color:#fff;border:0;place-items:center;z-index:3}
+html.ipad .pe-red:disabled{opacity:.35}
+html.ipad .pe-red .ms{font-size:22px;color:#fff}
+html:not(.ipad) .pe-red{display:none}
+html.ipad #pe-stage{position:absolute;top:calc(var(--top) + 64px);bottom:24px;left:124px;right:260px;display:grid;place-items:center;overflow:hidden}
+html.ipad #pe-tabs{position:absolute;left:24px;top:50%;transform:translateY(-50%);margin:0;height:auto;width:76px;flex-direction:column;padding:10px 0;border-radius:38px;z-index:3;align-items:stretch}
+html.ipad #pe-tabs button{flex:none;width:100%;height:84px;font-size:12px;gap:4px}
+html.ipad #pe-tabs button .ms{font-size:30px}
+html.ipad #pe-tabs button[data-t=tools]{display:none}
+html.ipad #pe-tabs .tri{left:-10px;top:0;width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:7px solid #FFD60A;border-right:0;border-radius:0;transition:top .3s var(--ease)}
+html.ipad #pe-tool{position:absolute;right:24px;top:calc(var(--top) + 64px);bottom:24px;min-height:0;width:auto;flex-direction:row;align-items:center;justify-content:flex-end;gap:14px;padding:0;margin:0;z-index:2}
+html.ipad .pe-lbl{font-size:17px;white-space:nowrap;text-align:right;height:auto;line-height:1.2;max-width:120px;color:#fff}
+html.ipad .pe-circles{flex-direction:column;overflow-y:auto;overflow-x:hidden;max-height:100%;padding:6px 4px;gap:14px;scrollbar-width:none;align-self:stretch;justify-content:center}
+html.ipad .pe-circles::-webkit-scrollbar{display:none}
+html.ipad .pe-c{width:60px;height:60px}
+html.ipad .pe-c .ms{font-size:28px}
+html.ipad .pe-ruler{width:36px;height:320px;flex:none}
+html.ipad .pe-ticks{left:0;top:-250px;width:100%;height:800px;background:repeating-linear-gradient(180deg,rgba(255,255,255,.55) 0 1.5px,transparent 1.5px 9px)}
+html.ipad .pe-mark{left:0;right:0;top:50%;width:auto;height:2.5px;margin:-1.25px 0 0;border-radius:2px}
+html.ipad .pe-strip{flex-direction:column;overflow-y:auto;overflow-x:hidden;width:auto;height:100%;padding:8px 4px;align-items:center}
+html.ipad .pe-th canvas{width:84px}
+
+/* =====================================================================
+   v19: 上部のアイコン行(iPhone)・ズームのダイヤル・iPad の右側の操作列・アイコン
+   ===================================================================== */
+.ico{width:24px;height:24px;display:block;overflow:visible}
+.ico text{font-family:-apple-system,"SF Pro Text",Helvetica,Arial,sans-serif}
+
+/* ---- iPhone: 上部のアイコン行(フラッシュ・LIVE・比率・連写・タイマー・露出・フォーマット) ---- */
+html.ios:not(.ipad) .topicons{position:absolute;top:calc(var(--sat) + 8px);left:0;right:0;display:flex;justify-content:center;align-items:center;pointer-events:none;z-index:4}
+html.ios:not(.ipad) .topicons .tb{pointer-events:auto;width:43px;height:40px;padding:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:none;box-shadow:none;color:#fff;border-radius:0;-webkit-backdrop-filter:none;backdrop-filter:none}
+html.ios:not(.ipad) .topicons .tb .ico{width:24px;height:24px}
+html.ios:not(.ipad) .topicons .tb.on{color:#FFD60A}
+html.ios:not(.ipad) .topicons .tb.dim{opacity:.42}
+html.ios:not(.ipad) .topicons .tb[data-k=ev] .evv{font-size:15px;font-weight:500;line-height:1;letter-spacing:.02em}
+html.ios:not(.ipad) .topicons .tb[data-k=ev] small{font-size:9px;font-weight:500;line-height:1}
+html.ios:not(.ipad) .topicons .tb[data-k=fmt]{width:auto;min-width:44px;padding:0 4px}
+html.ios:not(.ipad) .topicons .fmtTxt{display:flex;flex-direction:column;align-items:center;line-height:1}
+html.ios:not(.ipad) .topicons .fmtTxt b{font-size:13px;font-weight:600;color:#fff}
+html.ios:not(.ipad) .topicons .fmtTxt small{font-size:10px;font-weight:500;color:#fff;margin-top:2px}
+html.ios:not(.ipad) #chip-res,html.ios:not(.ipad) #btn-timer,html.ios:not(.ipad) #btn-burst{display:none!important}
+
+/* 左のボタン(被写界深度 ƒ): 動画では出さない */
+html.ios:not(.ipad) #ib-depth{position:absolute;left:34px;bottom:calc(var(--sab) + 100px);width:48px;height:48px;border-radius:50%;display:grid;place-items:center;color:#fff;border:0;background:rgba(40,40,44,.42);-webkit-backdrop-filter:blur(22px) saturate(180%);backdrop-filter:blur(22px) saturate(180%);box-shadow:inset 0 1px 0 rgba(255,255,255,.2)}
+html.ios:not(.ipad) #ib-depth .ico{width:26px;height:26px}
+html.ios:not(.ipad) #app[data-mode=video] #ib-depth{display:none}
+html.ios:not(.ipad) #btn-cap .ms .ico,html.ios #btn-flip .ms .ico{width:24px;height:24px}
+html.ios:not(.ipad) .ipad-top{display:none!important}
+
+/* ---- ツールシート(「…」)の円とアイコン ---- */
+.tile .tc{width:62px;height:62px;border-radius:50%;display:grid;place-items:center;background:rgba(62,62,66,.78);box-shadow:inset 0 1px 0 rgba(255,255,255,.14)}
+.tile .tc svg,.tile .tc .ico{width:28px;height:28px;color:#fff}
+.tile.on .tc svg{color:#FFD60A}
+.tile.dim .tc{opacity:.5}
+.tile .fmtTxt{display:flex;flex-direction:column;align-items:center;line-height:1}
+.tile .fmtTxt b{font-size:14px;font-weight:600;color:#fff}
+.tile .fmtTxt small{font-size:10px;color:#fff;margin-top:2px}
+
+/* ---- ズームのダイヤル(長押し) ---- */
+#zdial{position:absolute;left:0;right:0;bottom:0;height:340px;z-index:26;touch-action:none}
+#zdial[hidden]{display:none}
+#zdial svg{display:block;overflow:visible}
+#zdial .dbg{fill:rgba(26,26,28,.8)}
+#zdial line{stroke:rgba(255,255,255,.9);stroke-linecap:round}
+#zdial line.maj{stroke-width:2.6}
+#zdial line.min{stroke-width:1.4;stroke:rgba(255,255,255,.55)}
+#zdial .dlab{fill:#fff;font-size:17px;font-weight:600;text-anchor:middle;dominant-baseline:middle}
+#zdial .dlab.cur{fill:#FFD60A}
+#zdial .dmm{fill:rgba(255,255,255,.5);font-size:11px;text-anchor:middle}
+#zdial .dmark{fill:#FFD60A}
+#zdial .dbig{fill:#FFD60A;font-size:17px;font-weight:600;text-anchor:middle}
+#zdial .dmm2{fill:#FFD60A;font-size:11px;font-weight:500;text-anchor:middle}
+
+/* ---- iPad: 右側の操作列(参照: ビデオ = 解像度・FPS・フリップ・録画・モード / 写真 = ライブ・タイマー・フリップ・シャッター・サムネ・モード) ---- */
+html.ipad #topicons,html.ipad #ib-depth,html.ipad .iphone-only{display:none!important}
+html.ipad #chip-res,html.ipad #btn-timer,html.ipad #btn-burst{display:none!important}
+html.ios.ipad #controls{top:0;left:0;right:0;bottom:0}
+html.ios.ipad #stage{top:var(--top);left:0;right:0;bottom:0;padding:0}
+html.ios.ipad #btn-cap{top:calc(var(--top) + 8px);left:16px;right:auto;bottom:auto;width:44px;height:44px;border-radius:50%}
+html.ios.ipad #chip-lock{top:calc(var(--top) + 12px);left:72px}
+html.ios.ipad .ipad-top{position:absolute;right:calc(6% - 28px);width:56px;height:56px;border-radius:50%;display:grid;place-items:center;align-content:center;background:rgba(40,40,44,.55);color:#fff;border:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 6px 18px rgba(0,0,0,.25);-webkit-backdrop-filter:blur(22px) saturate(180%);backdrop-filter:blur(22px) saturate(180%);z-index:3;padding:0}
+html.ios.ipad .ipad-top b{font-size:18px;font-weight:500;line-height:1;display:block;color:#fff}
+html.ios.ipad .ipad-top small{font-size:10px;font-weight:500;display:block;margin-top:3px;color:#fff;letter-spacing:.02em}
+html.ios.ipad .ipad-top .ico{width:26px;height:26px}
+html.ios.ipad .ipad-top.on{color:#FFD60A}
+html.ios.ipad .ipad-top.on b,html.ios.ipad .ipad-top.on small{color:#FFD60A}
+html.ios.ipad #ib-res,html.ios.ipad #ib-live{top:calc(22% - 28px)}
+html.ios.ipad #ib-fps,html.ios.ipad #ib-timer2{top:calc(30.7% - 28px)}
+html.ios.ipad #app[data-mode=video] .ipad-photo{display:none!important}
+html.ios.ipad #app:not([data-mode=video]) .ipad-video{display:none!important}
+html.ios.ipad #btn-flip{position:absolute;top:calc(39% - 28px);right:calc(6% - 28px);left:auto;bottom:auto;width:56px;height:56px;transform:none;border-radius:50%}
+html.ios.ipad #btn-flip .ms .ico{width:26px;height:26px}
+html.ios.ipad #shutter-wrap{position:absolute;top:calc(50% - 44px);right:calc(6% - 44px);left:auto;bottom:auto;transform:none;width:88px;height:88px}
+html.ios.ipad #btn-gallery{position:absolute;top:calc(60.7% - 28px);right:calc(6% - 28px);left:auto;bottom:auto;width:56px;height:56px;border-radius:50%;border:0;overflow:hidden}
+html.ios.ipad #app[data-mode=video] #btn-gallery{display:none}
+html.ios.ipad #modes{position:absolute;top:calc(69% - 24px);right:calc(6% - 80px);left:auto;bottom:auto;transform:none;width:160px;height:auto;flex-direction:column!important;justify-content:flex-start;align-items:stretch;padding:0;border-radius:24px;background:none;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+html.ios.ipad #modes .mode{flex:none;width:100%;height:48px;line-height:48px;padding:0;text-align:center;font-size:18px;font-weight:500;color:rgba(255,255,255,.45);background:none}
+html.ios.ipad #modes .mode.sel{color:#FFD60A}
+html.ios.ipad #modes .ind{height:48px;border-radius:24px;background:rgba(40,40,44,.55);-webkit-backdrop-filter:blur(22px) saturate(180%);backdrop-filter:blur(22px) saturate(180%);box-shadow:inset 0 1px 0 rgba(255,255,255,.2)}
+html.ios.ipad #zoompanel,html.ios.ipad #zoompanel.show{top:calc(48.6% - 22px);left:3%;bottom:auto;right:auto}
+html.ios.ipad #zoompresets button.sel{width:44px;height:44px}

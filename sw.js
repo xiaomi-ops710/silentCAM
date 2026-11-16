@@ -2,12 +2,12 @@
    ・アプリ本体(HTML/CSS/JS)は「ネットワーク優先」: オンラインなら毎回サーバーから最新を取得し、
      オフラインの時だけキャッシュを使う。古い版が表示され続ける問題を防ぐ。
    ・Google Fonts(アイコン)と画像類は「キャッシュ優先」(変わらないため)。 */
-const VERSION = 'v17';
+const VERSION = 'v19';
 const CACHE = 'silentcam-shell-' + VERSION;
 const FONTS = 'silentcam-fonts';
 const SHELL = [
   './', 'index.html', 'styles.css', 'icons.css', 'icons/ms-outlined.woff', 'icons/ms-outlined.ttf',
-  'icons/ms-filled.woff', 'icons/ms-filled.ttf', 'app.js', 'scan.js', 'capture.js', 'gallery.js', 'ios.js', 'photoedit.js', 'manifest.webmanifest',
+  'icons/ms-filled.woff', 'icons/ms-filled.ttf', 'app.js', 'scan.js', 'capture.js', 'gallery.js', 'ios.js', 'icons-ios.js', 'photoedit.js', 'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/apple-touch-icon.png'
 ];
 

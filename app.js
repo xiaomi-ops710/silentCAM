@@ -125,6 +125,7 @@ const DB = {
    ===================================================================== */
 const app = $('#app'), stage = $('#stage'), viewport = $('#viewport'), zoomer = $('#zoomer'), video = $('#video');
 let stream = null, track = null, hwZoom = false;
+let lensId = null, ultraId = null;   // lensId: 使用中のレンズ(超広角=ultraId)、null=標準
 let zmin = 1, zmax = 10, zoom = 1, fx = .5, fy = .5;
 let recording = false, burstRunning = false, countdownTimer = null;
 let startingCamera = null;
@@ -137,11 +138,11 @@ async function getStream(isVideo, withAudio) {
     ? ({ 2160: [3840, 2160], 1080: [1920, 1080], 720: [1280, 720] }[cfg.videoRes] || [1920, 1080])
     : ({ max: [4032, 3024], '4k': [3840, 2160], fhd: [1920, 1080] }[cfg.photoRes] || [4032, 3024]);
   const fps = isVideo ? Number(cfg.fps) : 30;
-  const facing = { ideal: cfg.facing };
+  const base = lensId ? { deviceId: { exact: lensId } } : { facingMode: { ideal: cfg.facing } };
   const attempts = [
-    { facingMode: facing, width: { ideal: w }, height: { ideal: h }, frameRate: { ideal: fps } },
-    { facingMode: facing, width: { ideal: w }, height: { ideal: h } },
-    { facingMode: facing }
+    { ...base, width: { ideal: w }, height: { ideal: h }, frameRate: { ideal: fps } },
+    { ...base, width: { ideal: w }, height: { ideal: h } },
+    { ...base }
   ];
   const audio = withAudio ? { echoCancellation: false, noiseSuppression: false, autoGainControl: false } : false;
   let err;
@@ -149,6 +150,7 @@ async function getStream(isVideo, withAudio) {
     try { return await navigator.mediaDevices.getUserMedia({ video: v, audio }); }
     catch (e) { err = e; if (e.name === 'NotAllowedError' || e.name === 'SecurityError') break; }
   }
+  if (lensId) { lensId = null; toast('この端末では超広角を開けなかったので、標準に戻します', 2800); return getStream(isVideo, withAudio); }
   throw err;
 }
 
@@ -187,6 +189,7 @@ async function _startCamera() {
   try { await video.play(); } catch (_) {}
   track = stream.getVideoTracks()[0];
   track.addEventListener('ended', () => { if (!recording) setTimeout(startCamera, 400); });
+  detectLenses();
 
   const caps = track.getCapabilities ? track.getCapabilities() : {};
   hwZoom = !!(caps.zoom && caps.zoom.max > caps.zoom.min);
@@ -269,17 +272,18 @@ function setZoom(z, force) {
   zoom = Math.round(z * 100) / 100;
   if (hwZoom && track) pushHwZoom(zoom);
   applyTransform();
-  const label = (zoom % 1 === 0 ? zoom.toFixed(0) : zoom.toFixed(1)) + '×';
+  const shown = (lensId && lensId === ultraId && zoom === 1) ? 0.5 : zoom;   // 超広角の時は 0.5× と表示
+  const label = (shown % 1 === 0 ? shown.toFixed(0) : shown.toFixed(1)) + '×';
   $('#zoombtn').textContent = label;
   $('#zoomslider').value = zoom;
-  $$('#zoompresets button').forEach(b => b.classList.toggle('sel', Math.abs(Number(b.dataset.z) - zoom) < 0.06));
+  $$('#zoompresets button').forEach(b => b.classList.toggle('sel', Math.abs(Number(b.dataset.z) - shown) < 0.06));
 }
 function buildZoomUI() {
   const sl = $('#zoomslider'); sl.min = zmin; sl.max = zmax;
   const box = $('#zoompresets'); box.innerHTML = '';
-  [0.5, 1, 2, 3, 5, 10].filter(z => z >= zmin - 1e-6 && z <= zmax + 1e-6).forEach(z => {
+  [0.5, 1, 2, 3, 5, 10].filter(z => z < 1 || (z >= zmin - 1e-6 && z <= zmax + 1e-6)).forEach(z => {
     const b = document.createElement('button'); b.textContent = z + '×'; b.dataset.z = z;
-    b.onclick = () => { setZoom(z); keepZoomPanel(); }; box.appendChild(b);
+    b.onclick = () => { choosePreset(z); keepZoomPanel(); }; box.appendChild(b);
   });
 }
 let zpTimer;
@@ -376,7 +380,6 @@ const ASPECTS = { full: 0, '3:2': 1.5, '16:9': 16 / 9, '1:1': 1, a4: Math.SQRT2 
 // 撮影範囲の縦横比(長辺/短辺を、端末の向き=映像の向きに合わせて適用)。null=カメラそのまま
 function targetAspect(vw, vh) {
   if (cfg.mode === 'square') return 1;
-  if (isVideoMode()) return null;
   const k = ASPECTS[cfg.aspect]; if (!k) return null;
   return vw >= vh ? k : 1 / k;
 }
@@ -446,6 +449,7 @@ async function encodeAndSave(s) {
   x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
   if (p.mirror) x.setTransform(-1, 0, 0, 1, p.ow, 0); else x.setTransform(1, 0, 0, 1, 0, 0);
   x.drawImage(bmp, p.sx, p.sy, p.sw, p.sh, 0, 0, p.ow, p.oh);
+  applyStyleCanvas(c);   // 写真のスタイル(ios.js)
   const png = cfg.fmt === 'png';
   const type = png ? 'image/png' : 'image/jpeg';
   const blob = await toBlob(c, type, cfg.quality);
@@ -608,8 +612,9 @@ async function startRecord() {
   const mime = pickMime();
   if (mime === null) return toast('このブラウザは録画に対応していません');
   const bps = { 2160: 45e6, 1080: 18e6, 720: 9e6 }[cfg.videoRes] * (Number(cfg.fps) > 30 ? 1.5 : 1);
-  try { rec = new MediaRecorder(stream, { ...(mime ? { mimeType: mime } : {}), videoBitsPerSecond: bps }); }
-  catch (e) { try { rec = new MediaRecorder(stream); } catch (e2) { return toast('録画を開始できません'); } }
+  const recSrc = startCanvasRec() || stream;
+  try { rec = new MediaRecorder(recSrc, { ...(mime ? { mimeType: mime } : {}), videoBitsPerSecond: bps }); }
+  catch (e) { try { rec = new MediaRecorder(recSrc); } catch (e2) { return toast('録画を開始できません'); } }
   recChunks = [];
   try { recThumb = await snapshot(true); } catch (_) { recThumb = null; }
   rec.ondataavailable = e => { if (e.data && e.data.size) recChunks.push(e.data); };
@@ -622,7 +627,7 @@ async function startRecord() {
 }
 function stopRecord() { if (rec && rec.state !== 'inactive') rec.stop(); }
 async function finalizeRecord() {
-  clearInterval(recTimer);
+  clearInterval(recTimer); stopCanvasRec();
   const dur = recElapsed(); $('#btn-pause').hidden = true; recPausedAt = 0;
   recording = false; app.classList.remove('recording'); $('#btn-snap').hidden = true; $('#rec-chip').hidden = true;
   const type = (rec.mimeType || 'video/mp4').split(';')[0];
@@ -686,7 +691,7 @@ $$('#modes .mode').forEach(b => b.onclick = async () => {
 $('#btn-burst').onclick = () => { cfg.burstMode = !cfg.burstMode; saveCfg(); syncUI(); toast(cfg.burstMode ? '連写モード: シャッターで開始/停止' : '連写モードOFF(シャッター長押しで連写)'); };
 $('#btn-timer').onclick = () => { cfg.timer = { 0: 3, 3: 10, 10: 0 }[cfg.timer] || 0; saveCfg(); syncUI(); };
 let flipRot = 0;
-$('#btn-flip').onclick = async () => { if (recording) return; cancelPendingCapture(); flipRot += 180; $('#btn-flip .ms').style.transform = `rotate(${flipRot}deg)`; cfg.facing = cfg.facing === 'user' ? 'environment' : 'user'; zoom = 1; fx = fy = .5; saveCfg(); animateFlip(); await startCamera(); };
+$('#btn-flip').onclick = async () => { if (recording) return; cancelPendingCapture(); flipRot += 180; $('#btn-flip .ms').style.transform = `rotate(${flipRot}deg)`; cfg.facing = cfg.facing === 'user' ? 'environment' : 'user'; lensId = null; zoom = 1; fx = fy = .5; saveCfg(); animateFlip(); await startCamera(); };
 $('#btn-grid').onclick = () => { cfg.grid = !cfg.grid; saveCfg(); syncUI(); };
 $('#btn-level').onclick = () => toggleLevel(!cfg.level);
 $('#btn-peak').onclick = () => { cfg.peak = !cfg.peak; saveCfg(); syncUI(); syncSettings(); };
@@ -831,7 +836,7 @@ document.addEventListener('click', e => {
    ・起動のたびに sw.js を確認(HTTPキャッシュを使わない)
    ・新しい版が見つかったら、撮影中でない時に自動で読み直す(撮影を邪魔しない)
    ===================================================================== */
-const APP_VERSION = 'v17';
+const APP_VERSION = 'v19';
 let pendingReload = false;
 function busyNow() { return recording || burstRunning || AS.on || !!countdownTimer || (editor && editor.classList.contains('open')); }
 function applyPendingReload() {
@@ -926,4 +931,58 @@ function animateFlip() {
     { transform: 'perspective(1400px) rotateY(90deg) scale(.94)', opacity: .15, filter: 'blur(12px)', offset: .5 },
     { transform: 'perspective(1400px) rotateY(0deg)', opacity: 1, filter: 'blur(0px)' }
   ], { duration: 700, easing: 'cubic-bezier(.2,0,0,1)' });
+}
+
+
+/* ---------- ビデオの書き出し(切り取り・デジタルズームを録画に反映) ----------
+   比率やズームが効いている時は映像を canvas に描き、その canvas を録画する */
+let recCan = null, recRaf = 0;
+function startCanvasRec() {
+  if (!video.videoWidth) return null;
+  const p = cropParams();
+  if (p.sw === video.videoWidth && p.sh === video.videoHeight && p.ow === p.sw && p.oh === p.sh) return null;
+  recCan = document.createElement('canvas'); recCan.width = p.ow; recCan.height = p.oh;
+  const cx = recCan.getContext('2d');
+  const draw = () => {
+    if (!recCan) return;
+    const q = cropParams();
+    try { cx.drawImage(video, q.sx, q.sy, q.sw, q.sh, 0, 0, recCan.width, recCan.height); } catch (_) {}
+    recRaf = requestAnimationFrame(draw);
+  };
+  draw();
+  const tracks = recCan.captureStream(Math.min(60, Number(cfg.fps) || 30)).getVideoTracks();
+  if (cfg.audio && stream) stream.getAudioTracks().forEach(t => tracks.push(t));
+  return new MediaStream(tracks);
+}
+function stopCanvasRec() { cancelAnimationFrame(recRaf); recRaf = 0; recCan = null; }
+
+/* ---------- 0.5×(超広角)とズームの選択 ----------
+   ・ハードウェアのズームが0.5以下に対応していれば、それを使う
+   ・超広角レンズが列挙できれば、そのレンズに切り替える
+   ・どちらも無ければ、その旨を伝える */
+async function detectLenses() {
+  ultraId = null;
+  try {
+    if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+      const list = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput');
+      const u = list.find(d => /ultra|超広角|0\.5/i.test(d.label || ''));
+      ultraId = u ? u.deviceId : null;
+    }
+  } catch (_) { ultraId = null; }
+  if (!ultraId && lensId) ultraId = lensId;
+  buildZoomUI();
+}
+function choosePreset(z) {
+  if (z < 1) {
+    if (hwZoom && zmin <= z + 1e-6) { setZoom(z); return; }
+    if (ultraId) {
+      if (lensId !== ultraId) { lensId = ultraId; zoom = 1; fx = fy = .5; startCamera(); }
+      else setZoom(1);
+      return;
+    }
+    toast('0.5×(超広角)は、この端末・ブラウザでは開けませんでした', 3000);
+    return;
+  }
+  if (lensId) { lensId = null; zoom = z; fx = fy = .5; startCamera(); return; }
+  setZoom(z);
 }

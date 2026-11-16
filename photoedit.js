@@ -145,6 +145,7 @@ function peApplyPixels(data, w, h, p) {
   return data;
 }
 /* ---PURE-END--- */
+const PE_IPAD = document.documentElement.classList.contains('ipad');   // iPad は右の調整列・左の縦タブ
 
 const PE = {
   item: null, src: null, sw: 0, sh: 0, prev: null, pw: 0, ph: 0,
@@ -255,12 +256,16 @@ function buildRuler(box, def) {
   const r = el('div', 'pe-ruler'), t = el('div', 'pe-ticks');
   r.appendChild(t); r.appendChild(el('i', 'pe-mark'));
   const span = def.max - def.min, mid = def.min + span / 2;
-  const pos = () => { t.style.transform = `translateX(${-(peGet(def, PE.p) - mid) / span * 400}px)`; };
+  const pos = () => {
+    const off = -(peGet(def, PE.p) - mid) / span * 400;
+    t.style.transform = PE_IPAD ? `translateY(${off}px)` : `translateX(${off}px)`;
+  };
   let st = null;
-  r.addEventListener('pointerdown', e => { st = { x: e.clientX, v: peGet(def, PE.p) }; r.setPointerCapture(e.pointerId); e.preventDefault(); });
+  r.addEventListener('pointerdown', e => { st = { x: e.clientX, y: e.clientY, v: peGet(def, PE.p) }; r.setPointerCapture(e.pointerId); e.preventDefault(); });
   r.addEventListener('pointermove', e => {
     if (!st) return;
-    let v = peClamp(st.v + (e.clientX - st.x) * span / 400, def.min, def.max);
+    const d = PE_IPAD ? -(e.clientY - st.y) : (e.clientX - st.x);   // 縦のルーラー(iPad)は上へ動かすと増える
+    let v = peClamp(st.v + d * span / 400, def.min, def.max);
     const s = def.step || 1; v = Number((Math.round(v / s) * s).toFixed(2));
     peSet(def, PE.p, v); pos();
     if (PE.lblEl) PE.lblEl.textContent = lblText(def);
@@ -318,37 +323,42 @@ function onCircle(d) {
 }
 
 /* ---------- 上段のカプセル・タブ ---------- */
+function flipCrop() { const c = PE.p.crop; PE.p.flip = !PE.p.flip; PE.p.crop = { ...c, x: 1 - c.x - c.w }; commitPE(); renderAll(); }
+function rotateCrop() { PE.p.rot = (PE.p.rot + 1) % 4; PE.p.crop = { x: 0, y: 0, w: 1, h: 1 }; commitPE(); renderAll(); }
+function cycleAspect() {
+  PE.aspectIdx = (PE.aspectIdx + 1) % PE_ASPECTS.length;
+  const name = PE_ASPECTS[PE.aspectIdx][0]; PE.aspect = name;
+  const g = previewGeom(); PE.p.crop = aspectCrop(name, g.width / g.height);
+  commitPE(); renderAll();
+}
+function resetCrop() {
+  Object.assign(PE.p, { rot: 0, flip: false, angle: 0, crop: { x: 0, y: 0, w: 1, h: 1 } });
+  PE.aspect = 'free'; PE.aspectIdx = 0; commitPE(); renderAll();
+}
 function renderBar2() {
   const L = $('#pe-left'), R = $('#pe-right');
   L.innerHTML = ''; R.innerHTML = '';
   $('#pe-title').textContent = { adjust: '調整', filter: 'フィルタ', crop: '切り取り', tools: 'ツール' }[PE.tab];
-  const full = { x: 0, y: 0, w: 1, h: 1 };
+  const red = $('#pe-red');
+  if (red) { red.disabled = !(PE.item && PE.item.edited); red.onclick = peRevert; }
+  const undoBtn = () => iconBtn('undo', '取り消す', () => undoPE(-1), PE.hi === 0);
+  const redoBtn = () => iconBtn('redo', 'やり直す', () => undoPE(1), PE.hi >= PE.hist.length - 1);
+  const toolsTab = () => { PE.tab = 'tools'; PE.tool = null; renderAll(); };
+  if (PE_IPAD) {
+    if (PE.tab === 'crop') {
+      L.append(iconBtn('flip', 'フリップ', flipCrop), iconBtn('rotate_90_degrees_ccw', '回転', rotateCrop));
+      R.append(iconBtn('aspect_ratio', 'アスペクト比', cycleAspect), iconBtn('more_horiz', 'ツール', toolsTab), iconBtn('check', '完了', peSave));
+    } else {
+      L.append(iconBtn('compare', '比較', () => {}, true), undoBtn(), redoBtn());
+      R.append(iconBtn('open_in_full', '切り取り', () => { PE.tab = 'crop'; PE.tool = 'angle'; renderAll(); }), iconBtn('more_horiz', 'ツール', toolsTab), iconBtn('check', '完了', peSave));
+    }
+    return;
+  }
   if (PE.tab === 'crop') {
-    L.append(
-      iconBtn('flip', 'フリップ', () => {
-        const c = PE.p.crop; PE.p.flip = !PE.p.flip; PE.p.crop = { ...c, x: 1 - c.x - c.w };
-        commitPE(); renderAll();
-      }),
-      iconBtn('rotate_90_degrees_ccw', '回転', () => { PE.p.rot = (PE.p.rot + 1) % 4; PE.p.crop = { ...full }; commitPE(); renderAll(); })
-    );
-    R.append(
-      iconBtn('aspect_ratio', 'アスペクト比', () => {
-        PE.aspectIdx = (PE.aspectIdx + 1) % PE_ASPECTS.length;
-        const name = PE_ASPECTS[PE.aspectIdx][0];
-        PE.aspect = name;
-        PE.p.crop = aspectCrop(name, previewGeom().width / previewGeom().height);
-        commitPE(); renderAll();
-      }),
-      iconBtn('restart_alt', 'リセット', () => {
-        Object.assign(PE.p, { rot: 0, flip: false, angle: 0, crop: { ...full } });
-        PE.aspect = 'free'; PE.aspectIdx = 0; commitPE(); renderAll();
-      })
-    );
+    L.append(iconBtn('flip', 'フリップ', flipCrop), iconBtn('rotate_90_degrees_ccw', '回転', rotateCrop));
+    R.append(iconBtn('aspect_ratio', 'アスペクト比', cycleAspect), iconBtn('restart_alt', 'リセット', resetCrop));
   } else {
-    L.append(
-      iconBtn('undo', '取り消す', () => undoPE(-1), PE.hi === 0),
-      iconBtn('redo', 'やり直す', () => undoPE(1), PE.hi >= PE.hist.length - 1)
-    );
+    L.append(undoBtn(), redoBtn());
     R.append(iconBtn('settings_backup_restore', '元に戻す', peRevert, !(PE.item && PE.item.edited)));
   }
 }
@@ -356,9 +366,16 @@ function renderTabs() {
   const tabs = $$('#pe-tabs button');
   tabs.forEach(b => b.classList.toggle('on', b.dataset.t === PE.tab));
   const on = tabs.find(b => b.dataset.t === PE.tab), tri = $('#pe-tabs .tri');
-  if (on && tri) tri.style.left = (on.offsetLeft + on.offsetWidth / 2 - 4) + 'px';
+  if (!tri) return;
+  if (!on) { tri.style.display = 'none'; return; }
+  tri.style.display = '';
+  if (PE_IPAD) tri.style.top = (on.offsetTop + on.offsetHeight / 2 - 5) + 'px';
+  else tri.style.left = (on.offsetLeft + on.offsetWidth / 2 - 4) + 'px';
 }
-function renderAll() { paintPreview(); renderBar2(); renderTabs(); renderTool(); }
+function renderAll() {
+  paintPreview(); renderBar2(); renderTabs(); renderTool();
+  const pe = $('#pedit'); if (pe) pe.classList.toggle('crop', PE.tab === 'crop');
+}
 
 /* ---------- 切り取り枠のドラッグ ---------- */
 (function wireCrop() {
