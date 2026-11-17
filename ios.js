@@ -343,29 +343,35 @@ function hideDial() {
   const d = $('#zdial'); if (d) d.hidden = true;
   $('#zoompanel').classList.remove('dial-on');
 }
-// 押したまま左右に動かすと回る。左へ動かすと大きく(望遠側)、右へ動かすと小さく(広角側)
+// 押したまま左右に動かすと回る。左へ動かすと望遠側。ドラッグ中は表示だけ動かし、離したときに適用する
 function wireZoomPress() {
   const zp = $('#zoompresets');
+  let raf = 0;
+  const paint = () => { raf = 0; syncDial(dialZ); };
   zp.addEventListener('pointerdown', e => {
     const b = e.target.closest('button'); if (!b || !IOS_UI || IPAD_UI) return;
     lpFired = false;
     try { b.setPointerCapture(e.pointerId); } catch (_) {}
-    dialPress = { x: e.clientX, id: e.pointerId };
+    dialPress = { x: e.clientX };
     clearTimeout(lpT);
-    lpT = setTimeout(() => { lpFired = true; showDial(); }, 380);
+    lpT = setTimeout(() => {
+      lpFired = true; dialZ = shownZoom();
+      const d = $('#zdial'); if (d) d.classList.add('dragging');
+      showDial();
+    }, 380);
   });
   document.addEventListener('pointermove', e => {
     if (!dialOpen || !dialPress) return;
     const dx = e.clientX - dialPress.x; dialPress.x = e.clientX;
-    const ang = dialAng - dx * (180 / Math.PI) / DIAL.R;   // 左へ動かすと角度が増える
-    const z = Math.max(0.5, Math.min(zmax, Math.pow(2, ang / DIAL.K)));
-    if (z >= 1) setZoom(z);
-    syncDial(z);
-  });
+    dialAng = Math.max(-62, Math.min(62, dialAng - dx * (180 / Math.PI) / DIAL.R));
+    dialZ = Math.max(0.5, Math.min(zmax, Math.pow(2, dialAng / DIAL.K)));
+    if (!raf) raf = requestAnimationFrame(paint);
+  }, { passive: true });
   const end = () => {
     clearTimeout(lpT);
     if (dialOpen) {
-      const z = shownZoom();
+      const z = dialZ;
+      const d = $('#zdial'); if (d) d.classList.remove('dragging');
       hideDial();
       if (z < 1) choosePreset(0.5); else setZoom(z);
       keepZoomPanel();
@@ -461,14 +467,33 @@ function syncVideoSub() {
 }
 function openSettingsSub(id) { syncVideoSub(); $('#' + id).classList.add('open'); }
 function closeSettingsSub(id) { $('#' + id).classList.remove('open'); }
-// 部品は読み込みが済んだ後に差し替える(読み込めていない間は今の部品のまま)
+/* 部品が読み込めたかどうか */
+const LG_READY_SW = () => !!(window.customElements && customElements.get('lg-switch'));
+function waitLG(ms) {
+  if (!window.customElements) return Promise.resolve();
+  return Promise.race([
+    Promise.all(['lg-switch', 'lg-slider', 'lg-segmented'].map(n => customElements.whenDefined(n))),
+    new Promise(r => setTimeout(r, ms))
+  ]);
+}
+// スイッチ: 部品があれば lg-switch、無ければ正しく描ける代替(入力欄を透明にして、つまみは span で描く)
+function setupSwitch(inp) {
+  if (LG_READY_SW()) {
+    const sw = mk('lg-switch');
+    sw.dataset.key = inp.dataset.key;
+    sw.checked = inp.checked;
+    (inp.closest('.ios-sw') || inp).replaceWith(sw);
+    return;
+  }
+  if (!inp.closest('.ios-sw')) {
+    const w = mk('span', 'ios-sw');
+    inp.replaceWith(w);
+    w.append(inp, mk('span', 'trk', '<span class="knb"></span>'));
+  }
+}
 function convertSettingControls() {
-  if (!LG_READY()) return false;
-  if ($('#settings lg-switch')) return true;
-  $$('#settings input.switch[data-key]').forEach(inp => {
-    const sw = mk('lg-switch'); sw.dataset.key = inp.dataset.key; sw.checked = inp.checked;
-    inp.replaceWith(sw);
-  });
+  $$('#settings input.switch[data-key]').forEach(setupSwitch);
+  if (!LG_READY()) return;
   $$('#settings input[type=range][data-key]').forEach(r => {
     const sl = mk('lg-slider'); sl.dataset.key = r.dataset.key;
     sl.setAttribute('min', r.min); sl.setAttribute('max', r.max); sl.setAttribute('step', r.step);
@@ -480,7 +505,6 @@ function convertSettingControls() {
     sg.innerHTML = $$('button', seg).map(b => `<button value="${b.dataset.v}">${b.textContent}</button>`).join('');
     seg.replaceWith(sg);
   });
-  return true;
 }
 // 部品からの変更を cfg へ(app.js の applyKey を通す)
 function setupSettingEvents() {
@@ -498,49 +522,17 @@ function setupSettingEvents() {
     if (sl) applyKey(sl.dataset.key, parseFloat(sl.value));
   }, true);
 }
-function openSettingsIOS() {
+async function openSettingsIOS() {
   groupSettings();
   convertSettingControls();
   syncSettings();
   syncVideoSub();
   show(settings);
   updateUsage();
+  await waitLG(1500);          // 部品(components.js)の読み込みを待ってから、部品に差し替える
+  convertSettingControls();
+  syncSettings();
 }
-
-/* ---- 初期化 ---- */
-(() => {
-  if (!IOS_UI) return;
-  setupGlass();
-  const ctl = $('#controls');
-  ['#btn-cap', '#zoompanel', '#chip-res', '#chip-lock'].forEach(s => ctl.appendChild($(s)));
-  $('#tiles .ex-slot').append(...$$('#zoompanel .slrow'));
-  const fl = $('#btn-flip .ms'); fl.innerHTML = svgI('cameraFlip');
-  $('#btn-cap').innerHTML = `<span class="ms">${svgI('more')}</span>`;
-  $('#chip-res').onclick = () => openFmt();
-  buildTiles();
-  buildTop();
-  buildSideButtons();
-  buildDial();
-  wireZoomPress();
-  // 設定ボタン: 本家にはないが、機能への入口として左上(iPad は右上)に置く
-  const sb = $('#btn-settings');
-  if (sb) { ctl.appendChild(sb); sb.classList.add('lgg', 'settings-btn'); sb.innerHTML = `<span class="ms">${svgI('gear')}</span>`; }
-  // プレビューの大きさは、画面の大きさが変わるたびに計算し直す(動画が小さくなる不具合の対策)
-  if (window.ResizeObserver) new ResizeObserver(() => { try { layout(); } catch (_) {} }).observe($('#stage'));
-  ['tiles', 'fmt'].forEach(id => $('#' + id).addEventListener('click', e => { if (e.target.id === id) closeSheet(id); }));
-  $('#zoompresets').addEventListener('click', e => {
-    const b = e.target.closest && e.target.closest('button');
-    if (b && b.classList.contains('sel')) $('#zoompanel').classList.toggle('open');
-    else $('#zoompanel').classList.remove('open');
-  }, true);
-  updateResChip();
-  syncTop();
-  setupSettingEvents();
-  $('#btn-settings').onclick = openSettingsIOS;
-  // syncUI の後に上部の表示も更新する
-  const baseSyncUI = syncUI;
-  window.syncUI = function () { baseSyncUI(); syncTop(); syncTiles(); };
-})();
 
 /* ---- 写真の情報(iOS の「情報」風): 形式・解像度・画素数・容量・編集の状態 ----
    撮影時の ISO・焦点距離・場所はアプリに保存していないので表示しない */

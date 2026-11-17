@@ -442,11 +442,6 @@ input.switch:checked::after{left:23px;width:24px;height:24px;margin-top:-12px;ba
 #settings .row label{font-size:17px;color:#fff;line-height:1.3}
 #settings .row small{font-size:13px;color:#8E8E93;margin-top:2px;line-height:1.35}
 #settings .row.col{align-items:stretch;gap:10px;padding-top:12px;padding-bottom:12px}
-#settings input.switch{width:51px;height:31px;border:0;border-radius:16px;background:#39393D}
-#settings input.switch::after{left:2px;top:50%;width:27px;height:27px;margin-top:-13.5px;background:#fff;box-shadow:0 3px 8px rgba(0,0,0,.15),0 3px 1px rgba(0,0,0,.06)}
-#settings input.switch:active::after{width:27px;height:27px;margin-top:-13.5px}
-#settings input.switch:checked{background:#34C759;border:0}
-#settings input.switch:checked::after{left:22px;width:27px;height:27px;margin-top:-13.5px;background:#fff}
 #settings .seg{background:#2C2C2E;border:0;border-radius:9px;padding:2px;gap:2px}
 #settings .seg button{min-width:0;padding:6px 12px;font-size:14px;font-weight:500;border:0;border-radius:7px;color:#fff;background:transparent}
 #settings .seg button.sel{background:#636366;color:#fff;font-weight:600}
@@ -467,12 +462,6 @@ input.switch:checked::after{left:23px;width:24px;height:24px;margin-top:-12px;ba
 #settings .grp .row{min-height:52px;padding:13px 18px}
 #settings .grp .row+.row::before{left:18px;background:rgba(84,84,88,.6)}
 #settings .row label{font-size:17px}
-#settings input.switch{width:51px;height:31px;background:#68686D}
-#settings input.switch::after{left:2px;top:50%;width:31px;height:27px;margin-top:-13.5px;border-radius:14px;background:#fff;box-shadow:0 2px 7px rgba(0,0,0,.28),0 0 1px rgba(0,0,0,.2);transition:left .3s var(--spring),width .25s var(--spring)}
-#settings input.switch:active::after{width:36px;height:27px;margin-top:-13.5px}
-#settings input.switch:checked{background:#66C96E}
-#settings input.switch:checked::after{left:18px;width:31px;height:27px;margin-top:-13.5px}
-#settings input.switch:checked:active::after{left:13px;width:36px;height:27px;margin-top:-13.5px}
 #settings .seg{border-radius:999px;padding:3px;background:#1C1C1E}
 #settings .seg button{border-radius:999px;padding:7px 14px}
 #settings .seg button.sel{background:#636366;color:#fff}
@@ -974,8 +963,6 @@ lg-segmented{max-width:100%}
 #settings .seg button{flex:1;background:none;border:0;color:#fff;padding:6px 10px;border-radius:7px;font-size:14px}
 #settings .seg button.sel{background:#636366}
 /* スイッチ(部品が無い時の見た目) */
-#settings input.switch{appearance:none;-webkit-appearance:none;width:51px;height:31px;border-radius:16px;background:#39393d;position:relative;flex:none;transition:background .25s;margin:0}
-#settings input.switch:checked{background:#34c759}
 /* 一覧ページ(ビデオ撮影) */
 #settings .sub-page{position:absolute;inset:0;background:#000;overflow:auto;transform:translateX(100%);transition:transform .38s cubic-bezier(.32,.72,0,1);z-index:6;padding:calc(var(--sat) + 8px) 0 60px}
 #settings .sub-page.open{transform:none}
@@ -1009,9 +996,6 @@ lg-segmented{background:rgba(118,118,128,.24);border-radius:9px}
 #settings .grp,#settings .sub-page{contain:layout paint}
 /* 部品の動き: 押したときの変化は transform / opacity だけで行う */
 lg-switch,lg-slider,lg-segmented,#settings input.switch{will-change:transform}
-#settings input.switch{transition:background-color .22s ease}
-#settings input.switch::after{content:"";position:absolute;width:27px;height:27px;border-radius:50%;background:#fff;top:2px;left:2px;transition:transform .26s cubic-bezier(.3,.7,.3,1);box-shadow:0 2px 4px rgba(0,0,0,.3)}
-#settings input.switch:checked::after{transform:translateX(20px)}
 #settings .chk-row{transition:background-color .15s ease}
 
 /* iPad の設定: 画面の幅を広く使う(本家の設定画面と同じ広さ) */
@@ -1030,3 +1014,20 @@ html.ipad #settings .ios-h{padding:0 36px}
 .vi-ios .vi-kv span:first-child{color:#8e8e93}
 .vi-ios .vi-kv span:last-child{text-align:right}
 .vi-badge{display:inline-block;background:#48484a;border-radius:999px;padding:2px 10px;font-size:14px;color:#fff}
+
+/* =====================================================================
+   v27: スイッチの代替表示(部品が読み込めない時) / ズームのダイヤル(ドラッグ中は動かすだけ) /
+        iPad は映像を全画面に、上部の操作だけを下げる
+   ===================================================================== */
+#settings .ios-sw{position:relative;display:inline-block;width:51px;height:31px;flex:none}
+#settings .ios-sw input.switch{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;z-index:2;cursor:pointer}
+#settings .ios-sw .trk{position:absolute;inset:0;border-radius:16px;background:#39393d;transition:background-color .25s ease;pointer-events:none}
+#settings .ios-sw .knb{position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,.3);transition:transform .28s cubic-bezier(.3,.7,.3,1)}
+#settings .ios-sw input.switch:checked ~ .trk{background:#34c759}
+#settings .ios-sw input.switch:checked ~ .trk .knb{transform:translateX(20px)}
+
+#zdial.dragging #zdial-g{transition:none}
+
+html.ipad{--top:120px}
+html.ios.ipad #stage{top:0;bottom:0}
+html.ios.ipad #viewport.fill{width:100%!important;height:100%!important}

@@ -187,7 +187,9 @@ async function _startCamera() {
   }
   video.srcObject = stream;
   video.classList.toggle('mirror', cfg.facing === 'user');
-  try { await video.play(); } catch (_) {}
+  try { await Promise.race([video.play(), new Promise(r => setTimeout(r, 1500))]); } catch (_) {}
+  // 後半の設定で例外が出ても、映像の表示(切り替え中の隠れ)は必ず解除する
+  try {
   track = stream.getVideoTracks()[0];
   track.addEventListener('ended', () => { if (!recording) setTimeout(startCamera, 400); });
   detectLenses();
@@ -205,7 +207,8 @@ async function _startCamera() {
   updateResChip();
   lockScreen();
   aeLocked = false; updateLockUI(); setupExposure(caps); if (window.buildAdjust) buildAdjust(caps);
-  viewport.classList.remove('switching');
+  } catch (e) { console.warn('カメラの設定の一部を適用できませんでした', e); }
+  finally { viewport.classList.remove('switching'); }
 }
 function stopStream() {
   if (stream) stream.getTracks().forEach(t => t.stop());
@@ -846,7 +849,7 @@ document.addEventListener('click', e => {
    ・起動のたびに sw.js を確認(HTTPキャッシュを使わない)
    ・新しい版が見つかったら、撮影中でない時に自動で読み直す(撮影を邪魔しない)
    ===================================================================== */
-const APP_VERSION = 'v26';
+const APP_VERSION = 'v27';
 let pendingReload = false;
 function busyNow() { return recording || burstRunning || AS.on || !!countdownTimer || (editor && editor.classList.contains('open')); }
 function applyPendingReload() {
