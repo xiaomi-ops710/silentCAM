@@ -35,7 +35,6 @@ const DEF = {
 let cfg = { ...DEF };
 try { Object.assign(cfg, JSON.parse(localStorage.getItem('silentcam-cfg') || '{}')); } catch (_) {}
 cfg.zebra = false; cfg.histo = false;   // 白飛び警告・ヒストグラムは起動のたびにオフ
-if (document.documentElement.classList.contains('dev-ipad10') && cfg.videoRes === '2160' && Number(cfg.fps) > 30) cfg.fps = 30;   // iPad 第10世代は 4K60 に非対応
 const saveCfg = () => { try { localStorage.setItem('silentcam-cfg', JSON.stringify(cfg)); } catch (_) {} };
 
 /* ---------- トースト / ダイアログ ---------- */
@@ -783,7 +782,10 @@ let restartTimer;
 function syncSettings() {
   $$('#settings [data-key]').forEach(el => {
     const k = el.dataset.key;
-    if (el.classList.contains('seg')) $$('button', el).forEach(b => b.classList.toggle('sel', b.dataset.v === String(cfg[k])));
+    if (el.tagName === 'LG-SWITCH') el.checked = !!cfg[k];
+    else if (el.tagName === 'LG-SLIDER') el.value = cfg[k];
+    else if (el.tagName === 'LG-SEGMENTED') el.value = String(cfg[k]);
+    else if (el.classList.contains('seg')) $$('button', el).forEach(b => b.classList.toggle('sel', b.dataset.v === String(cfg[k])));
     else if (el.type === 'checkbox') el.checked = !!cfg[k];
     else if (el.type === 'text') { if (document.activeElement !== el) el.value = cfg[k] === 'IMG' ? '' : cfg[k]; }
     else if (el.type === 'range') el.value = cfg[k];
@@ -839,7 +841,7 @@ document.addEventListener('click', e => {
    ・起動のたびに sw.js を確認(HTTPキャッシュを使わない)
    ・新しい版が見つかったら、撮影中でない時に自動で読み直す(撮影を邪魔しない)
    ===================================================================== */
-const APP_VERSION = 'v23';
+const APP_VERSION = 'v25';
 let pendingReload = false;
 function busyNow() { return recording || burstRunning || AS.on || !!countdownTimer || (editor && editor.classList.contains('open')); }
 function applyPendingReload() {

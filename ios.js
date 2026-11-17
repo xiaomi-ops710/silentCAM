@@ -12,8 +12,8 @@ const IPAD_UI = document.documentElement.classList.contains('ipad');
 const mk = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
 const svgI = name => svgIcon(name);
 const IPAD10 = document.documentElement.classList.contains('dev-ipad10');
-// 端末ごとのフレームレートの選択肢(iPad 第10世代は 4K のとき 60fps が無い)
-const fpsChoices = res => (IPAD10 && String(res) === '2160') ? [24, 30] : [24, 30, 60];
+// フレームレートの選択肢(4K でも 24/30/60fps)
+const fpsChoices = () => [24, 30, 60];
 
 /* ---- 解像度表示(上部・右の列で共通に使う2行の表示) ---- */
 const baseResChip = updateResChip;
@@ -188,7 +188,6 @@ function openFmt() {
       const b = mk('button', String(cfg[r.k]) === val ? 'sel' : '', label);
       b.onclick = () => {
         applyKey(r.k, r.k === 'fps' ? Number(val) : val);
-        if (r.k === 'videoRes' && IPAD10 && val === '2160' && Number(cfg.fps) > 30) applyKey('fps', 30);
         openFmt();
       };
       opts.appendChild(b);
@@ -406,6 +405,108 @@ function setupGlass() {
   ['.ib', '.ipad-top', '#btn-cap', '#btn-flip', '#ib-depth', '.lg', '#modes .ind', '.tile .tc'].forEach(sel => document.querySelectorAll(sel).forEach(e => e.classList.add('lgg')));
 }
 
+/* ---- 設定: iOS の「設定」風の一覧 ----
+   ・項目を角丸のグループにまとめ、見出しと説明を iOS の書式にする
+   ・スイッチ・スライダー・分段は Liquid Glass の部品(lg-switch / lg-slider / lg-segmented)に差し替える
+     (部品が読み込めなかった時は今の部品のまま)
+   ・ビデオ撮影は、解像度とフレームレートをチェックマーク付きの一覧で選ぶ */
+const LG_READY = () => !!(window.customElements && customElements.get('lg-switch') && customElements.get('lg-slider') && customElements.get('lg-segmented'));
+const VIDEO_OPTS = [['720', 30], ['1080', 30], ['1080', 60], ['2160', 24], ['2160', 30], ['2160', 60]];
+const VIDEO_LABEL = { '720': '720p HD', '1080': '1080p HD', '2160': '4K' };
+function videoOptLabel(r, f) { return `${VIDEO_LABEL[r]}/${f} fps`; }
+function videoOptDisabled() { return false; }
+
+function groupSettings() {
+  const panel = $('#settings .panel');
+  if (!panel || panel.dataset.grouped) return;
+  panel.dataset.grouped = '1';
+  let grp = null;
+  [...panel.children].forEach(ch => {
+    if (ch.tagName === 'H3') { ch.classList.add('ios-h'); grp = null; return; }
+    if (ch.classList.contains('row') || ch.classList.contains('mrow') || (ch.tagName === 'LABEL' && ch.classList.contains('mrow'))) {
+      if (!grp) { grp = mk('div', 'grp'); ch.before(grp); }
+      grp.appendChild(ch);
+    } else grp = null;
+  });
+  // ビデオ撮影: 解像度・フレームレートの行を1つの「ビデオ撮影」行にまとめる
+  const resRow = $('#settings .seg[data-key=videoRes]') && $('#settings .seg[data-key=videoRes]').closest('.row');
+  const fpsRow = $('#settings .seg[data-key=fps]') && $('#settings .seg[data-key=fps]').closest('.row');
+  if (resRow) {
+    const nav = mk('div', 'row nav');
+    nav.innerHTML = `<label>ビデオ撮影</label><span class="val" id="vid-val"></span>`;
+    nav.onclick = () => openSettingsSub('sub-video');
+    resRow.before(nav);
+    resRow.style.display = 'none';
+    if (fpsRow) fpsRow.style.display = 'none';
+  }
+  const sub = mk('section', 'sub-page'); sub.id = 'sub-video';
+  sub.innerHTML = `<header class="sub-top"><button class="sub-back" id="sub-back" aria-label="設定に戻る"><span class="chev-l"></span>設定</button><b>ビデオ撮影</b><span style="width:60px"></span></header><div class="grp" id="vid-list"></div><p class="foot">1分間のビデオのサイズは、解像度とフレームレートで変わります。</p>`;
+  $('#settings').appendChild(sub);
+  $('#sub-back').onclick = () => closeSettingsSub('sub-video');
+  $('#vid-list').addEventListener('click', e => {
+    const b = e.target.closest('.chk-row'); if (!b || b.classList.contains('dis')) return;
+    applyKey('videoRes', b.dataset.r);
+    applyKey('fps', Number(b.dataset.f));
+    syncVideoSub();
+  });
+}
+function syncVideoSub() {
+  const r = String(cfg.videoRes), f = Number(cfg.fps);
+  const v = $('#vid-val'); if (v) v.textContent = `${VIDEO_LABEL[r] || r} / ${f} fps`;
+  const list = $('#vid-list'); if (!list) return;
+  list.innerHTML = VIDEO_OPTS.map(([rr, ff]) => {
+    const sel = rr === r && ff === f, dis = videoOptDisabled(rr, ff);
+    return `<div class="chk-row${sel ? ' sel' : ''}${dis ? ' dis' : ''}" data-r="${rr}" data-f="${ff}"><span>${videoOptLabel(rr, ff)}</span><span class="ck">${svgI('checkmark')}</span></div>`;
+  }).join('');
+}
+function openSettingsSub(id) { syncVideoSub(); $('#' + id).classList.add('open'); }
+function closeSettingsSub(id) { $('#' + id).classList.remove('open'); }
+// 部品は読み込みが済んだ後に差し替える(読み込めていない間は今の部品のまま)
+function convertSettingControls() {
+  if (!LG_READY()) return false;
+  if ($('#settings lg-switch')) return true;
+  $$('#settings input.switch[data-key]').forEach(inp => {
+    const sw = mk('lg-switch'); sw.dataset.key = inp.dataset.key; sw.checked = inp.checked;
+    inp.replaceWith(sw);
+  });
+  $$('#settings input[type=range][data-key]').forEach(r => {
+    const sl = mk('lg-slider'); sl.dataset.key = r.dataset.key;
+    sl.setAttribute('min', r.min); sl.setAttribute('max', r.max); sl.setAttribute('step', r.step);
+    sl.value = parseFloat(r.value);
+    r.replaceWith(sl);
+  });
+  $$('#settings .seg[data-key]').forEach(seg => {
+    const sg = mk('lg-segmented'); sg.dataset.key = seg.dataset.key;
+    sg.innerHTML = $$('button', seg).map(b => `<button value="${b.dataset.v}">${b.textContent}</button>`).join('');
+    seg.replaceWith(sg);
+  });
+  return true;
+}
+// 部品からの変更を cfg へ(app.js の applyKey を通す)
+function setupSettingEvents() {
+  document.addEventListener('change', e => {
+    const sw = e.target.closest && e.target.closest('lg-switch[data-key]');
+    if (sw) return applyKey(sw.dataset.key, !!sw.checked);
+    const sg = e.target.closest && e.target.closest('lg-segmented[data-key]');
+    if (sg) {
+      const k = sg.dataset.key, raw = String(sg.value);
+      applyKey(k, /^-?\d+(\.\d+)?$/.test(raw) && k !== 'videoRes' ? Number(raw) : raw);
+    }
+  }, true);
+  document.addEventListener('input', e => {
+    const sl = e.target.closest && e.target.closest('lg-slider[data-key]');
+    if (sl) applyKey(sl.dataset.key, parseFloat(sl.value));
+  }, true);
+}
+function openSettingsIOS() {
+  groupSettings();
+  convertSettingControls();
+  syncSettings();
+  syncVideoSub();
+  show(settings);
+  updateUsage();
+}
+
 /* ---- 初期化 ---- */
 (() => {
   if (!IOS_UI) return;
@@ -434,6 +535,8 @@ function setupGlass() {
   }, true);
   updateResChip();
   syncTop();
+  setupSettingEvents();
+  $('#btn-settings').onclick = openSettingsIOS;
   // syncUI の後に上部の表示も更新する
   const baseSyncUI = syncUI;
   window.syncUI = function () { baseSyncUI(); syncTop(); syncTiles(); };

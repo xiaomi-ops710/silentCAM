@@ -945,3 +945,47 @@ html.dev-ipad10 .lgg::after{opacity:.7}
 html.dev-ipad10 html.lg-refract .lgg{-webkit-backdrop-filter:blur(14px) saturate(165%);backdrop-filter:blur(14px) saturate(165%)}
 html.dev-iphone-61.ios:not(.ipad) .topicons{top:calc(var(--sat) - 2px)}
 html.dev-iphone-61.ios:not(.ipad) #btn-settings{top:calc(var(--sat) - 2px)}
+
+/* =====================================================================
+   v24: 設定画面を iOS の「設定」に寄せる(グループ・見出し・区切り線・チェックマーク一覧)
+   部品は Liquid Glass(lg-switch / lg-slider / lg-segmented)。読み込めない時は今の部品のまま。
+   ===================================================================== */
+#settings{background:#000}
+#settings .panel{background:#000;max-width:640px;margin:0 auto;padding:0 0 60px}
+#settings .appbar{position:sticky;top:0;z-index:3;display:flex;align-items:center;padding:calc(var(--sat) + 8px) 16px 4px;background:rgba(0,0,0,.72);-webkit-backdrop-filter:blur(20px) saturate(180%);backdrop-filter:blur(20px) saturate(180%)}
+#settings .appbar h1{font-size:34px;font-weight:700;letter-spacing:.005em;color:#fff;margin:0}
+#settings #s-close{background:none;color:#0a84ff;font-size:17px;font-weight:600;padding:8px 4px;border:0}
+#settings .ios-h{font-size:13px;color:#8e8e93;font-weight:400;padding:0 36px;margin:22px 0 7px;text-transform:none;letter-spacing:0}
+#settings .grp{background:#1c1c1e;border-radius:26px;margin:0 16px;overflow:hidden}
+#settings .grp>.row,#settings .grp>.mrow,#settings .grp>label{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:50px;padding:10px 16px;margin:0;border:0;border-bottom:.5px solid rgba(84,84,88,.65);color:#fff;font-size:17px;background:none;box-sizing:border-box;flex-wrap:wrap}
+#settings .grp>:last-child{border-bottom:0!important}
+#settings .grp>.row.col{flex-direction:column;align-items:stretch}
+#settings .grp small{display:block;font-size:13px;color:#8e8e93;margin-top:2px;line-height:1.3;font-weight:400}
+#settings .grp>.nav{cursor:pointer}
+#settings .row.nav .val{color:#8e8e93;margin-left:auto;font-size:17px}
+#settings .row.nav::after{content:"";width:8px;height:8px;border-right:2px solid #3c3c43;border-top:2px solid #3c3c43;transform:rotate(45deg);margin-left:4px;flex:none}
+#settings input.txt{background:none;border:0;color:#8e8e93;text-align:right;font-size:17px;outline:none;min-width:120px}
+#settings .grp .foot,#settings .foot{font-size:13px;color:#8e8e93;padding:8px 36px 0;line-height:1.35}
+lg-switch,lg-slider,lg-segmented{--lg-accent:#0a84ff;--lg-on:#34c759}
+lg-slider{width:170px;flex:none}
+lg-segmented{max-width:100%}
+/* 分段(部品が無い時の見た目) */
+#settings .seg{display:flex;background:#2c2c2e;border-radius:9px;padding:2px;gap:2px}
+#settings .seg button{flex:1;background:none;border:0;color:#fff;padding:6px 10px;border-radius:7px;font-size:14px}
+#settings .seg button.sel{background:#636366}
+/* スイッチ(部品が無い時の見た目) */
+#settings input.switch{appearance:none;-webkit-appearance:none;width:51px;height:31px;border-radius:16px;background:#39393d;position:relative;flex:none;transition:background .25s;margin:0}
+#settings input.switch:checked{background:#34c759}
+/* 一覧ページ(ビデオ撮影) */
+#settings .sub-page{position:absolute;inset:0;background:#000;overflow:auto;transform:translateX(100%);transition:transform .38s cubic-bezier(.32,.72,0,1);z-index:6;padding:calc(var(--sat) + 8px) 0 60px}
+#settings .sub-page.open{transform:none}
+#settings .sub-top{display:flex;align-items:center;justify-content:space-between;padding:0 16px 10px;color:#fff;font-size:17px;font-weight:600}
+#settings .sub-back{color:#0a84ff;background:none;border:0;font-size:17px;display:flex;align-items:center;gap:2px;padding:6px 0;font-weight:400}
+#settings .chev-l{width:9px;height:9px;border-left:2.5px solid #0a84ff;border-bottom:2.5px solid #0a84ff;transform:rotate(45deg);margin-right:4px;display:inline-block}
+#settings .chk-row{display:flex;justify-content:space-between;align-items:center;padding:0 16px;min-height:50px;color:#fff;font-size:17px;border-bottom:.5px solid rgba(84,84,88,.65);transition:background .15s}
+#settings .chk-row:last-child{border-bottom:0}
+#settings .chk-row:active{background:#2c2c2e}
+#settings .chk-row .ck{width:20px;height:20px;opacity:0;transition:opacity .2s}
+#settings .chk-row .ck svg{width:20px;height:20px;color:#0a84ff}
+#settings .chk-row.sel .ck{opacity:1}
+#settings .chk-row.dis{opacity:.35;pointer-events:none}
