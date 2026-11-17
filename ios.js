@@ -541,3 +541,25 @@ function openSettingsIOS() {
   const baseSyncUI = syncUI;
   window.syncUI = function () { baseSyncUI(); syncTop(); syncTiles(); };
 })();
+
+/* ---- 写真の情報(iOS の「情報」風): 形式・解像度・画素数・容量・編集の状態 ----
+   撮影時の ISO・焦点距離・場所はアプリに保存していないので表示しない */
+const baseFillInfo = fillInfo;
+window.fillInfo = function (it) {
+  baseFillInfo(it);
+  const box = $('#vi-extra'); if (!box || !it) return;
+  const fmt = it.type === 'video' ? 'MOV' : (it.mime === 'image/png' ? 'PNG' : 'JPEG');
+  const d = new Date(it.ts);
+  const week = '日月火水木金土'[d.getDay()];
+  const rows = [
+    ['形式', `<span class="vi-badge">${fmt}</span>`],
+    ['解像度', `${it.w} × ${it.h}`],
+    ['画素数', `${(it.w * it.h / 1e6).toFixed(1)} MP`],
+    ['容量', fmtBytes(it.size)],
+    ['編集', it.edited ? '編集済み（元の写真あり）' : '編集なし']
+  ];
+  box.innerHTML = `<div class="vi-top"><div><p class="vi-strong">${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 ${week}曜日 ${hm(it.ts)}</p><p class="vi-sub">${it.name}</p></div>${it.type === 'photo' ? '<button class="vi-link" id="vi-edit-link">調整</button>' : ''}</div>`
+    + rows.map(([k, v]) => `<div class="vi-kv"><span>${k}</span><span>${v}</span></div>`).join('');
+  const link = $('#vi-edit-link');
+  if (link) link.onclick = () => { closeInfo(); openPhotoEdit(it); };
+};

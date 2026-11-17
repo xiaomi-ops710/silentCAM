@@ -989,3 +989,44 @@ lg-segmented{max-width:100%}
 #settings .chk-row .ck svg{width:20px;height:20px;color:#0a84ff}
 #settings .chk-row.sel .ck{opacity:1}
 #settings .chk-row.dis{opacity:.35;pointer-events:none}
+
+/* =====================================================================
+   v26: 比率の枠 / 設定を暗く統一 / 設定のなめらかな動き / iPad の上部の位置 / 情報画面
+   ===================================================================== */
+/* 比率の枠: 枠の外側を暗くする(映像は画面いっぱい) */
+#frame-mask{position:absolute;box-sizing:border-box;border:1px solid rgba(255,255,255,.45);box-shadow:0 0 0 200vmax rgba(0,0,0,.55);pointer-events:none;z-index:2}
+#frame-mask[hidden]{display:none}
+
+/* iPad: iPadOS 27 の上部のぼかし(メニューバー)より下に置く */
+html.ipad{--top:100px}
+
+/* 設定: すべて暗い配色(部品の明るい配色を使わない) */
+#settings,#settings *{color-scheme:dark}
+lg-segmented,lg-switch,lg-slider{color-scheme:dark;background:none}
+lg-segmented{background:rgba(118,118,128,.24);border-radius:9px}
+/* 上部バーはぼかさない(sticky＋backdrop-filter は、スクロールのたびに描き直しが重くなりカクつく原因) */
+#settings .appbar{background:#000;-webkit-backdrop-filter:none;backdrop-filter:none;will-change:auto}
+#settings .grp,#settings .sub-page{contain:layout paint}
+/* 部品の動き: 押したときの変化は transform / opacity だけで行う */
+lg-switch,lg-slider,lg-segmented,#settings input.switch{will-change:transform}
+#settings input.switch{transition:background-color .22s ease}
+#settings input.switch::after{content:"";position:absolute;width:27px;height:27px;border-radius:50%;background:#fff;top:2px;left:2px;transition:transform .26s cubic-bezier(.3,.7,.3,1);box-shadow:0 2px 4px rgba(0,0,0,.3)}
+#settings input.switch:checked::after{transform:translateX(20px)}
+#settings .chk-row{transition:background-color .15s ease}
+
+/* iPad の設定: 画面の幅を広く使う(本家の設定画面と同じ広さ) */
+html.ipad #settings .panel{max-width:min(1100px,94vw)}
+html.ipad #settings .grp{margin:0 auto;width:min(1100px,94vw);box-sizing:border-box}
+html.ipad #settings .ios-h{padding:0 36px}
+
+/* 情報画面(iOS風): 行ごとの区切り、形式のバッジ、「調整」のリンク */
+.vi-ios{padding:0}
+.vi-ios .vi-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:16px 18px 14px;border-bottom:.5px solid rgba(84,84,88,.65)}
+.vi-ios .vi-top .vi-strong{font-size:17px;font-weight:600;color:#fff;margin:0}
+.vi-ios .vi-top .vi-sub{font-size:15px;color:#8e8e93;margin:4px 0 0}
+.vi-ios .vi-link{background:none;border:0;color:#0a84ff;font-size:17px;padding:0;white-space:nowrap}
+.vi-ios .vi-kv{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 18px;border-bottom:.5px solid rgba(84,84,88,.65);font-size:17px;color:#fff}
+.vi-ios .vi-kv:last-child{border-bottom:0}
+.vi-ios .vi-kv span:first-child{color:#8e8e93}
+.vi-ios .vi-kv span:last-child{text-align:right}
+.vi-badge{display:inline-block;background:#48484a;border-radius:999px;padding:2px 10px;font-size:14px;color:#fff}

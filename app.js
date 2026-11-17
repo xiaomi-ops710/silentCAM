@@ -236,13 +236,18 @@ function layout() {
   const ta = targetAspect(vw, vh);
   // 写真(フル)とビデオは画面いっぱいに表示(映像は cover で埋める)。切り出し比率のときは枠内に収める
   const fill = !ta;
-  viewport.classList.toggle('fill', fill);
-  let w, h;
-  if (fill) { w = stage.clientWidth; h = stage.clientHeight; }
+  viewport.classList.add('fill');   // 映像は常に画面いっぱい。比率の外は枠の外側を暗くして示す(保存は枠どおり)
+  let w = stage.clientWidth, h = stage.clientHeight;
+  const frame = document.getElementById('frame-mask');
+  if (fill) { if (frame) frame.hidden = true; }
   else {
     const m = IOS ? 0 : 20, cw = stage.clientWidth - m, ch = stage.clientHeight - m;
-    w = cw; h = cw / ta;
-    if (h > ch) { h = ch; w = ch * ta; }
+    let fw = cw, fh = cw / ta;
+    if (fh > ch) { fh = ch; fw = ch * ta; }
+    if (frame) {
+      frame.hidden = false;
+      Object.assign(frame.style, { width: Math.floor(fw) + 'px', height: Math.floor(fh) + 'px', left: Math.floor((w - fw) / 2) + 'px', top: Math.floor((h - fh) / 2) + 'px' });
+    }
   }
   viewport.style.width = Math.floor(w) + 'px'; viewport.style.height = Math.floor(h) + 'px';
   applyTransform();
@@ -841,7 +846,7 @@ document.addEventListener('click', e => {
    ・起動のたびに sw.js を確認(HTTPキャッシュを使わない)
    ・新しい版が見つかったら、撮影中でない時に自動で読み直す(撮影を邪魔しない)
    ===================================================================== */
-const APP_VERSION = 'v25';
+const APP_VERSION = 'v26';
 let pendingReload = false;
 function busyNow() { return recording || burstRunning || AS.on || !!countdownTimer || (editor && editor.classList.contains('open')); }
 function applyPendingReload() {
